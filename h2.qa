@@ -5,6 +5,8 @@ System qHealtHelp
 //PARAMETER is the numeric value registered by the sensor
 Event sensordata : sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP)
 Dispatch patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP)
+Dispatch userIdHistoryRequest : userIdHistoryRequest(USER_ID)
+Dispatch userIdHistoryResponse : userIdHistoryResponse(LIST)
 
 
 
@@ -12,8 +14,7 @@ Context ctx_patient ip[host= "localhost" port=1234]
 Context ctx_sensor ip[host= "localhost" port=1235]
 Context ctx_folder ip[host= "localhost" port=3456]
 
-QActor qpatient_data_retriever context ctx_patient -g cyan {
-	
+QActor qpatient_sensor_data_retriever context ctx_patient -g cyan {
 	Rules {
 		userID(42).
 		event_retrieve(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP) :- 
@@ -41,9 +42,42 @@ QActor qpatient_data_retriever context ctx_patient -g cyan {
 		[!? event_retrieve(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP)] forward qfolder -m patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP);
 		[?? msg(E, 'event', S,V,sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), N)] println("")
 	] 
-
-
 }
+
+
+
+QActor qpatient_history_retriever context ctx_patient -g blue{
+	Rules {
+		userID(42).
+	}
+	
+	Plan init normal [		
+		println(" --- [H] Initialize data history retriever qactor --- ")
+	]
+	switchTo retrieving
+	
+	Plan retrieving [
+		delay 20000;
+		[!? userID(USER_ID)] forward qfolder -m userIdHistoryRequest : userIdHistoryRequest(USER_ID) 
+	]
+	switchTo wait
+	
+	
+	Plan wait [
+		println("[H] waiting for parameters ---")
+	]
+	transition stopAfter 86400000 
+	//whenEvent sensordata -> sendData 
+	whenMsg userIdHistoryResponse -> display 
+	
+	Plan display [
+		onMsg userIdHistoryResponse : userIdHistoryResponse(LIST) -> println(LIST)		
+	]
+	switchTo retrieving
+}
+
+
+
 
 //this qactor is related  to 1 and 2
 QActor qsensor context ctx_patient -g green{
@@ -58,6 +92,8 @@ QActor qsensor context ctx_patient -g green{
 		delay 2500
 	] finally repeatPlan
 }
+
+
 
 
 QActor qfolder context ctx_folder -g yellow{
