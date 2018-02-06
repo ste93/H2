@@ -3,7 +3,7 @@ System qHealtHelp
 //DATA_TYPE is the type of parameter measured by sensor (e.g. temperature)
 //UOM is Unity of Measurement
 //PARAMETER is the numeric value registered by the sensor
-Event sensordata : sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP)
+Event local_sensordata : local_sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP)
 Dispatch patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP)
 Dispatch userIdHistoryRequest : userIdHistoryRequest(USER_ID)
 Dispatch userIdHistoryResponse : userIdHistoryResponse(LIST)
@@ -11,7 +11,7 @@ Dispatch userIdHistoryResponse : userIdHistoryResponse(LIST)
 
 
 Context ctx_patient ip[host= "localhost" port=1234]
-Context ctx_sensor ip[host= "localhost" port=1235]
+Context ctx_doctor ip[host= "localhost" port=1235]
 Context ctx_folder ip[host= "localhost" port=3456]
 
 QActor qpatient_sensor_data_retriever context ctx_patient -g cyan {
@@ -19,7 +19,7 @@ QActor qpatient_sensor_data_retriever context ctx_patient -g cyan {
 		userID(42).
 		event_retrieve(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP) :- 
 			userID(USER_ID), 
-			msg(E, 'event', S,V,sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), N).
+			msg(E, 'event', S,V,local_sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), N).
 	}
 	
 	Plan init normal [
@@ -32,15 +32,15 @@ QActor qpatient_sensor_data_retriever context ctx_patient -g cyan {
 	] 
 	
 	transition stopAfter 86400000 
-	whenEvent sensordata -> sendData 
+	whenEvent local_sensordata -> sendData 
 	finally repeatPlan
 	
 	
 	Plan sendData resumeLastPlan [
 		println("[P] Sending patients data to the folder");
-		onEvent sensordata : sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP) -> memoCurrentEvent;
+		onEvent local_sensordata : local_sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP) -> memoCurrentEvent;
 		[!? event_retrieve(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP)] forward qfolder -m patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP);
-		[?? msg(E, 'event', S,V,sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), N)] println("")
+		[?? msg(E, 'event', S,V,local_sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), N)] println("")
 	] 
 }
 
@@ -67,7 +67,6 @@ QActor qpatient_history_retriever context ctx_patient -g blue{
 		println("[H] waiting for parameters ---")
 	]
 	transition stopAfter 86400000 
-	//whenEvent sensordata -> sendData 
 	whenMsg userIdHistoryResponse -> display 
 	
 	Plan display [
@@ -75,7 +74,6 @@ QActor qpatient_history_retriever context ctx_patient -g blue{
 	]
 	switchTo retrieving
 }
-
 
 
 
@@ -88,7 +86,7 @@ QActor qsensor context ctx_patient -g green{
 	
 	Plan working [
 		println("[S] Emitting a value");
-		emit sensordata : sensordata(36, temp, celsius, "12/12/12");
+		emit local_sensordata : local_sensordata(36, temp, celsius, "12/12/12");
 		delay 2500
 	] finally repeatPlan
 }
@@ -97,6 +95,11 @@ QActor qsensor context ctx_patient -g green{
 
 
 QActor qfolder context ctx_folder -g yellow{
+	Rules {
+		retrieve_message(USER_ID,LIST) :- 
+			findall(parameter(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), patient_parameter(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP), LIST),
+			userID(USER_ID).
+	}
 	Plan init normal [
 		println(" --- [F] Initialize folder --- ")
 	] switchTo wait
@@ -106,13 +109,50 @@ QActor qfolder context ctx_folder -g yellow{
 	] 
 	
 	transition stopAfter 86400000
-	whenMsg patientsData_msg -> handleData
+	whenMsg patientsData_msg -> handleData,
+	whenMsg userIdHistoryRequest -> retrieveData
 	finally repeatPlan
 	
 	Plan handleData resumeLastPlan [
-		println ("Received new data from patient");
+		println ("[F] Received new data from patient");
 		onMsg patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP) -> addRule patient_parameter(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP);    
-		[!? findall(parameter(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), patient_parameter(42, PARAMETER, DATA_TYPE, UOM, TIMESTAMP), L)] println(L);
 		printCurrentMessage
 	] 
+	
+	Plan retrieveData resumeLastPlan [
+		println ("[F] Requesting data from patient");
+		onMsg userIdHistoryRequest : userIdHistoryRequest(USER_ID) -> addRule userID(USER_ID);
+		[!? retrieve_message(USER_ID,LIST)] forward qpatient_history_retriever -m userIdHistoryResponse : userIdHistoryResponse(LIST);
+		[?? userID(USER_ID)] println("[F] done")
+	]
+}
+
+
+QActor qdoctor_history_retriever context ctx_doctor -g white{
+	Rules {
+		userID(42).
+	}
+	
+	Plan init normal [		
+		println(" --- [D] Initialize data history retriever qactor --- ")
+	]
+	switchTo retrieving
+	
+	Plan retrieving [
+		delay 20000;
+		[!? userID(USER_ID)] forward qfolder -m userIdHistoryRequest : userIdHistoryRequest(USER_ID) 
+	]
+	switchTo wait
+	
+	
+	Plan wait [
+		println("[D] waiting for parameters ---")
+	]
+	transition stopAfter 86400000 
+	whenMsg userIdHistoryResponse -> display 
+	
+	Plan display [
+		onMsg userIdHistoryResponse : userIdHistoryResponse(LIST) -> println(LIST)		
+	]
+	switchTo retrieving
 }
