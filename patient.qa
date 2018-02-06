@@ -16,7 +16,7 @@ Context ctx_patient ip[host= "localhost" port=44444] -g green
 Context ctx_folder ip[host= "localhost" port=3456] -standalone 
 
 
-
+//this qactor is related to 1 and 2
 QActor qpatient_sensor_data_retriever context ctx_patient {
 	Rules {
 		userID(42).
@@ -31,7 +31,7 @@ QActor qpatient_sensor_data_retriever context ctx_patient {
 	switchTo wait
 	
 	Plan wait [
-		println("[P] waiting for messages")
+		println(" --- [P] waiting for messages ---")
 	]
 	
 	transition stopAfter 86400000 
@@ -40,7 +40,7 @@ QActor qpatient_sensor_data_retriever context ctx_patient {
 	
 	
 	Plan sendData resumeLastPlan [
-		println("[P] Sending patients data to the folder");
+		println(" --- [P] Sending patients data to the folder ---");
 		onEvent local_sensordata : local_sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP) -> memoCurrentEvent;
 		[!? event_retrieve(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP)] sendto qfolder in ctx_folder -m patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP);
 		[?? msg(E, 'event', S,V,local_sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), N)] println("")
@@ -48,7 +48,7 @@ QActor qpatient_sensor_data_retriever context ctx_patient {
 }
 
 
-
+//this qactor is related to 7
 QActor qpatient_history_retriever context ctx_patient {
 	Rules {
 		userID(42).
@@ -61,6 +61,7 @@ QActor qpatient_history_retriever context ctx_patient {
 	
 	Plan retrieving [
 		delay 20000;
+		println(" --- [H] Asking for patient data --- ");
 		[!? userID(USER_ID)] sendto qfolder in ctx_folder -m patientHistoryRequest : patientHistoryRequest(USER_ID) 
 	]
 	switchTo wait
@@ -73,6 +74,7 @@ QActor qpatient_history_retriever context ctx_patient {
 	whenMsg patientHistoryResponse -> display 
 	
 	Plan display [
+		println(" --- [H] display patients data: --- ");
 		onMsg patientHistoryResponse : patientHistoryResponse(LIST) -> println(LIST)		
 	]
 	switchTo retrieving
@@ -80,7 +82,7 @@ QActor qpatient_history_retriever context ctx_patient {
 
 
 
-//this qactor is related  to 1 and 2
+//this qactor is related to 1
 QActor qsensor context ctx_patient {
 	Plan init normal [
 		delay 2000;

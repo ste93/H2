@@ -19,10 +19,10 @@ Context ctx_doctor ip[host= "localhost" port=1235] -g white
 
 
 
-
+//this qactor is related to 4
 QActor qdoctor_history_retriever context ctx_doctor {
 	Rules {
-		userID(42).
+		patientID(42).
 	}
 	
 	Plan init normal [		
@@ -32,18 +32,20 @@ QActor qdoctor_history_retriever context ctx_doctor {
 	
 	Plan retrieving [
 		delay 20000;
-		[!? userID(USER_ID)] sendto qfolder in ctx_folder -m doctorHistoryRequest : doctorHistoryRequest(USER_ID) 
+		println(" --- [D] Asking for patients data --- ");
+		[!? patientID(USER_ID)] sendto qfolder in ctx_folder -m doctorHistoryRequest : doctorHistoryRequest(USER_ID) 
 	]
 	switchTo wait
 	
 	
 	Plan wait [
-		println("[D] waiting for parameters ---")
+		println(" --- [D] waiting for parameters --- ")
 	]
 	transition stopAfter 86400000 
 	whenMsg doctorHistoryResponse -> display 
 	
 	Plan display [
+		println(" --- [D] display patients data: --- ");
 		onMsg doctorHistoryResponse : doctorHistoryResponse(LIST) -> println(LIST)		
 	]
 	switchTo retrieving

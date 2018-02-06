@@ -16,7 +16,7 @@ Context ctx_folder ip[host= "localhost" port=3456] -g yellow
 Context ctx_patient ip[host= "localhost" port=44444] -standalone 
 Context ctx_doctor ip[host= "localhost" port=1235] -standalone 
 
-
+//this qactor is related to 2, 4, 5, 7, 8
 QActor qfolder context ctx_folder {
 	Rules {
 		retrieve_message(USER_ID,LIST) :- 
@@ -38,27 +38,27 @@ QActor qfolder context ctx_folder {
 	finally repeatPlan
 	
 	Plan handleData resumeLastPlan [
-		println ("[F] Received new data from patient");
+		println (" --- [F] Received new data from patient --- ");
 		onMsg patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP) -> demo asserta(patient_parameter(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP));    
 		[!? patient_parameter(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP)] forward qanalyser -m analysisRequest : analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM)
 	] 
 	
 	Plan retrieveDataPatient resumeLastPlan [
-		println ("[F] Requesting data for patient");
+		println (" --- [F] Requesting data for patient --- ");
 		onMsg patientHistoryRequest : patientHistoryRequest(USER_ID) -> addRule userID(USER_ID);
 		[!? retrieve_message(USER_ID,LIST)] sendto qpatient_history_retriever in ctx_patient -m patientHistoryResponse : patientHistoryResponse(LIST);
-		[?? userID(USER_ID)] println("[F] done")
+		[?? userID(USER_ID)] println(" --- [F] done ---")
 	]
 
 	Plan retrieveDataDoctor resumeLastPlan [
-		println ("[F] Requesting data for doctor");
+		println (" --- [F] Requesting data for doctor --- ");
 		onMsg doctorHistoryRequest : doctorHistoryRequest(USER_ID) -> addRule userID(USER_ID);
 		[!? retrieve_message(USER_ID,LIST)] sendto qdoctor_history_retriever in ctx_doctor -m doctorHistoryResponse : doctorHistoryResponse(LIST);
-		[?? userID(USER_ID)] println("[F] done")
+		[?? userID(USER_ID)] println(" --- [F] done ---")
 	]
 }
 
-
+//this qactor is related to 3
 QActor qanalyser context ctx_folder {
 	Rules {
 		analyser(VAL, temp, celsius, febbre) :- eval(gt, VAL, 37),!.
