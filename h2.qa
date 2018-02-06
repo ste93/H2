@@ -5,8 +5,10 @@ System qHealtHelp
 //PARAMETER is the numeric value registered by the sensor
 Event local_sensordata : local_sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP)
 Dispatch patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP)
-Dispatch userIdHistoryRequest : userIdHistoryRequest(USER_ID)
-Dispatch userIdHistoryResponse : userIdHistoryResponse(LIST)
+Dispatch patientHistoryRequest : patientHistoryRequest(USER_ID)
+Dispatch patientHistoryResponse : patientHistoryResponse(LIST)
+Dispatch doctorHistoryRequest : doctorHistoryRequest(USER_ID)
+Dispatch doctorHistoryResponse : doctorHistoryResponse(LIST)
 
 
 
@@ -58,7 +60,7 @@ QActor qpatient_history_retriever context ctx_patient -g blue{
 	
 	Plan retrieving [
 		delay 20000;
-		[!? userID(USER_ID)] forward qfolder -m userIdHistoryRequest : userIdHistoryRequest(USER_ID) 
+		[!? userID(USER_ID)] forward qfolder -m patientHistoryRequest : patientHistoryRequest(USER_ID) 
 	]
 	switchTo wait
 	
@@ -67,10 +69,10 @@ QActor qpatient_history_retriever context ctx_patient -g blue{
 		println("[H] waiting for parameters ---")
 	]
 	transition stopAfter 86400000 
-	whenMsg userIdHistoryResponse -> display 
+	whenMsg patientHistoryResponse -> display 
 	
 	Plan display [
-		onMsg userIdHistoryResponse : userIdHistoryResponse(LIST) -> println(LIST)		
+		onMsg patientHistoryResponse : patientHistoryResponse(LIST) -> println(LIST)		
 	]
 	switchTo retrieving
 }
@@ -110,7 +112,8 @@ QActor qfolder context ctx_folder -g yellow{
 	
 	transition stopAfter 86400000
 	whenMsg patientsData_msg -> handleData,
-	whenMsg userIdHistoryRequest -> retrieveData
+	whenMsg patientHistoryRequest -> retrieveDataPatient,
+	whenMsg doctorHistoryRequest -> retrieveDataDoctor
 	finally repeatPlan
 	
 	Plan handleData resumeLastPlan [
@@ -119,10 +122,17 @@ QActor qfolder context ctx_folder -g yellow{
 		printCurrentMessage
 	] 
 	
-	Plan retrieveData resumeLastPlan [
-		println ("[F] Requesting data from patient");
-		onMsg userIdHistoryRequest : userIdHistoryRequest(USER_ID) -> addRule userID(USER_ID);
-		[!? retrieve_message(USER_ID,LIST)] forward qpatient_history_retriever -m userIdHistoryResponse : userIdHistoryResponse(LIST);
+	Plan retrieveDataPatient resumeLastPlan [
+		println ("[F] Requesting data for patient");
+		onMsg patientHistoryRequest : patientHistoryRequest(USER_ID) -> addRule userID(USER_ID);
+		[!? retrieve_message(USER_ID,LIST)] forward qpatient_history_retriever -m patientHistoryResponse : patientHistoryResponse(LIST);
+		[?? userID(USER_ID)] println("[F] done")
+	]
+
+	Plan retrieveDataDoctor resumeLastPlan [
+		println ("[F] Requesting data for doctor");
+		onMsg doctorHistoryRequest : doctorHistoryRequest(USER_ID) -> addRule userID(USER_ID);
+		[!? retrieve_message(USER_ID,LIST)] forward qdoctor_history_retriever -m doctorHistoryResponse : doctorHistoryResponse(LIST);
 		[?? userID(USER_ID)] println("[F] done")
 	]
 }
@@ -140,7 +150,7 @@ QActor qdoctor_history_retriever context ctx_doctor -g white{
 	
 	Plan retrieving [
 		delay 20000;
-		[!? userID(USER_ID)] forward qfolder -m userIdHistoryRequest : userIdHistoryRequest(USER_ID) 
+		[!? userID(USER_ID)] forward qfolder -m doctorHistoryRequest : doctorHistoryRequest(USER_ID) 
 	]
 	switchTo wait
 	
@@ -149,10 +159,10 @@ QActor qdoctor_history_retriever context ctx_doctor -g white{
 		println("[D] waiting for parameters ---")
 	]
 	transition stopAfter 86400000 
-	whenMsg userIdHistoryResponse -> display 
+	whenMsg doctorHistoryResponse -> display 
 	
 	Plan display [
-		onMsg userIdHistoryResponse : userIdHistoryResponse(LIST) -> println(LIST)		
+		onMsg doctorHistoryResponse : doctorHistoryResponse(LIST) -> println(LIST)		
 	]
 	switchTo retrieving
 }
