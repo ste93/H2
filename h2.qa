@@ -16,7 +16,7 @@ QActor qpatient_data_retriever context ctx_patient -g cyan {
 	
 	Rules {
 		userID(42).
-		msg_retrieve(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP) :- 
+		event_retrieve(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP) :- 
 			userID(USER_ID), 
 			msg(E, 'event', S,V,sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), N).
 	}
@@ -38,7 +38,7 @@ QActor qpatient_data_retriever context ctx_patient -g cyan {
 	Plan sendData resumeLastPlan [
 		println("[P] Sending patients data to the folder");
 		onEvent sensordata : sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP) -> memoCurrentEvent;
-		[!? msg_retrieve(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP)] forward qfolder -m patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP);
+		[!? event_retrieve(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP)] forward qfolder -m patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP);
 		[?? msg(E, 'event', S,V,sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), N)] println("")
 	] 
 
@@ -75,8 +75,8 @@ QActor qfolder context ctx_folder -g yellow{
 	
 	Plan handleData resumeLastPlan [
 		println ("Received new data from patient");
-		//onMsg patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP) -> 
+		onMsg patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP) -> addRule patient_parameter(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP);    
+		[!? findall(parameter(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), patient_parameter(42, PARAMETER, DATA_TYPE, UOM, TIMESTAMP), L)] println(L);
 		printCurrentMessage
-		
 	] 
 }
