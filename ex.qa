@@ -1,0 +1,90 @@
+System qHealtHelp
+
+//DATA_TYPE is the type of parameter measured by sensor (e.g. temperature)
+//UOM is Unity of Measurement
+//PARAMETER is the numeric value registered by the sensor
+Event sensordata : sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP)
+Dispatch patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP)
+
+
+
+Context ctx_patient ip[host= "localhost" port=1234]
+Context ctx_sensor ip[host= "localhost" port=1235]
+Context ctx_folder ip[host= "localhost" port=3456]
+
+QActor qpatient_data_retriever context ctx_patient -g cyan {
+	
+	Rules {
+		userID(42).
+		//sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP) :- patientsData(42, PARAMETER, DATA_TYPE, UOM, TIMESTAMP).
+		msg_retrieve(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP) :- 
+			userID(USER_ID), 
+			msg(E, 'event', S,V,sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), N).
+		//sd(5, 24, celsius, "1556156165165").
+	}
+	
+	Plan init normal [
+		println(" --- [P] Initialize data retriever qactor --- ")
+	]
+	switchTo wait
+	
+	Plan wait [
+		println("[P] waiting for messages")
+	] 
+	
+	transition stopAfter 86400000 
+	whenEvent sensordata -> sendData 
+	finally repeatPlan
+	
+	
+	Plan sendData resumeLastPlan [
+		println("[P] Sending patients data to the folder");
+		onEvent sensordata : sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP) -> memoCurrentEvent;
+		[!? msg_retrieve(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP)] forward qfolder -m patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP);
+		[?? msg(E, 'event', S,V,sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), N)] println("")
+	] 
+	/* 
+	Plan sending resumeLastPlan [
+		[!? userID(USER_ID) ] 
+		forward qfolder -m patientsData_msg : patientsData(userID(X), PARAMETER, DATA_TYPE, UOM, TIMESTAMP)      
+		
+	]*/
+	
+
+}
+
+//this qactor is related  to 1 and 2
+QActor qsensor context ctx_patient -g green{
+	Plan init normal [
+		delay 2000;
+		println("[S] Initialize a sensor")
+	] switchTo working
+	
+	Plan working [
+		println("[S] Emitting a value");
+		emit sensordata : sensordata(36, temp, celsius, "12/12/12");
+		delay 2500
+	] finally repeatPlan
+}
+
+
+QActor qfolder context ctx_folder -g yellow{
+	Plan init normal [
+		println(" --- [F] Initialize folder --- ")
+	] switchTo wait
+	
+	Plan wait [
+		println(" --- [F] Waiting for messages --- ")
+	] 
+	
+	transition stopAfter 86400000
+	whenMsg patientsData_msg -> handleData
+	finally repeatPlan
+	
+	Plan handleData resumeLastPlan [
+		println ("Received new data from patient");
+		//onMsg patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP) -> 
+		printCurrentMessage
+		
+	] 
+}
