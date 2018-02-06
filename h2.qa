@@ -16,11 +16,9 @@ QActor qpatient_data_retriever context ctx_patient -g cyan {
 	
 	Rules {
 		userID(42).
-		//sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP) :- patientsData(42, PARAMETER, DATA_TYPE, UOM, TIMESTAMP).
 		msg_retrieve(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP) :- 
 			userID(USER_ID), 
 			msg(E, 'event', S,V,sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), N).
-		//sd(5, 24, celsius, "1556156165165").
 	}
 	
 	Plan init normal [
@@ -43,13 +41,7 @@ QActor qpatient_data_retriever context ctx_patient -g cyan {
 		[!? msg_retrieve(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP)] forward qfolder -m patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP);
 		[?? msg(E, 'event', S,V,sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), N)] println("")
 	] 
-	/* 
-	Plan sending resumeLastPlan [
-		[!? userID(USER_ID) ] 
-		forward qfolder -m patientsData_msg : patientsData(userID(X), PARAMETER, DATA_TYPE, UOM, TIMESTAMP)      
-		
-	]*/
-	
+
 
 }
 
