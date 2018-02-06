@@ -9,10 +9,12 @@ Dispatch patientHistoryRequest : patientHistoryRequest(USER_ID)
 Dispatch patientHistoryResponse : patientHistoryResponse(LIST)
 Dispatch doctorHistoryRequest : doctorHistoryRequest(USER_ID)
 Dispatch doctorHistoryResponse : doctorHistoryResponse(LIST)
+Dispatch analysisRequest : analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM)
+Dispatch analysisResponse : analysisResponse(USER_ID, DESCRIPTION)
 
 
 
-Context ctx_patient ip[host= "localhost" port=1234]
+Context ctx_patient ip[host= "localhost" port=44444]
 Context ctx_doctor ip[host= "localhost" port=1235]
 Context ctx_folder ip[host= "localhost" port=3456]
 
@@ -88,6 +90,8 @@ QActor qsensor context ctx_patient -g green{
 	
 	Plan working [
 		println("[S] Emitting a value");
+		emit local_sensordata : local_sensordata(37, temp, celsius, "12/12/12");
+		delay 2500;
 		emit local_sensordata : local_sensordata(36, temp, celsius, "12/12/12");
 		delay 2500
 	] finally repeatPlan
@@ -119,8 +123,7 @@ QActor qfolder context ctx_folder -g yellow{
 	Plan handleData resumeLastPlan [
 		println ("[F] Received new data from patient");
 		onMsg patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP) -> addRule patient_parameter(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP);    
-		printCurrentMessage
-	] 
+		[!? patient_parameter(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP)] forward qanalyser -m analysisRequest : analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM)	] 
 	
 	Plan retrieveDataPatient resumeLastPlan [
 		println ("[F] Requesting data for patient");
@@ -138,13 +141,39 @@ QActor qfolder context ctx_folder -g yellow{
 }
 
 
+QActor qanalyser context ctx_folder -g gray {
+	Rules {
+		analyser(37, temp, celsius, febbre).
+		
+		analyse(USER, RESP) :- 
+			analyser(VALUE, DATA_TYPE, UOM, RESP), 
+			analysisRequest(USER, VALUE, DATA_TYPE, UOM).		
+	}
+	Plan init normal [
+		println(" --- [A] Initialise analyser --- ")
+	] switchTo wait
+	
+	Plan wait [
+		println(" --- [A] Waiting for messages --- ")
+	] 
+	transition stopAfter 86400000 
+	whenMsg analysisRequest -> analyse 
+	finally repeatPlan
+	
+	Plan analyse resumeLastPlan [
+		onMsg analysisRequest : analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM) -> addRule analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM);
+		[!? analyse(USER, RESP)] println(RESP);
+		[??analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM)] println(PARAMETER)
+	]
+}
+
 QActor qdoctor_history_retriever context ctx_doctor -g white{
 	Rules {
 		userID(42).
 	}
 	
 	Plan init normal [		
-		println(" --- [D] Initialize data history retriever qactor --- ")
+		println(" --- [D] Initialise data history retriever qactor --- ")
 	]
 	switchTo retrieving
 	
