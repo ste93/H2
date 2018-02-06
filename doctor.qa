@@ -1,0 +1,50 @@
+System qHealtHelp
+
+//DATA_TYPE is the type of parameter measured by sensor (e.g. temperature)
+//UOM is Unity of Measurement
+//PARAMETER is the numeric value registered by the sensor
+Event local_sensordata : local_sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP)
+Dispatch patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP)
+Dispatch patientHistoryRequest : patientHistoryRequest(USER_ID)
+Dispatch patientHistoryResponse : patientHistoryResponse(LIST)
+Dispatch doctorHistoryRequest : doctorHistoryRequest(USER_ID)
+Dispatch doctorHistoryResponse : doctorHistoryResponse(LIST)
+Dispatch analysisRequest : analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM)
+Dispatch analysisResponse : analysisResponse(USER_ID, DESCRIPTION)
+
+Context ctx_folder ip[host= "localhost" port=3456] -standalone 
+Context ctx_patient ip[host= "localhost" port=44444] -standalone 
+Context ctx_doctor ip[host= "localhost" port=1235] -g white 
+
+
+
+
+
+QActor qdoctor_history_retriever context ctx_doctor {
+	Rules {
+		userID(42).
+	}
+	
+	Plan init normal [		
+		println(" --- [D] Initialise data history retriever qactor --- ")
+	]
+	switchTo retrieving
+	
+	Plan retrieving [
+		delay 20000;
+		[!? userID(USER_ID)] sendto qfolder in ctx_folder -m doctorHistoryRequest : doctorHistoryRequest(USER_ID) 
+	]
+	switchTo wait
+	
+	
+	Plan wait [
+		println("[D] waiting for parameters ---")
+	]
+	transition stopAfter 86400000 
+	whenMsg doctorHistoryResponse -> display 
+	
+	Plan display [
+		onMsg doctorHistoryResponse : doctorHistoryResponse(LIST) -> println(LIST)		
+	]
+	switchTo retrieving
+}
