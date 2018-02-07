@@ -73,7 +73,7 @@ QActor qanalyser context ctx_folder {
 		analyser(VAL, temp, celsius, non_febbre) :- eval(gt, 37, VAL), !.
 		analyser(37, temp, celsius, non_febbre).
 		
-		analyse(USER, RESP) :- 
+		analyse(USER, RESP, VALUE, DATA_TYPE, UOM) :- 
 			analysisRequest(USER, VALUE, DATA_TYPE, UOM),
 			analyser(VALUE, DATA_TYPE, UOM, RESP).	
 	}
@@ -91,7 +91,8 @@ QActor qanalyser context ctx_folder {
 	
 	Plan analyse resumeLastPlan [
 		onMsg analysisRequest : analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM) -> addRule analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM);
-		[!? analyse(USER, febbre)] publish "unibo/mqtt/healthhelp" for qdoctor_notification_handler -m notification : notification(USER, febbre, PARAMETER, DATA_TYPE, UOM);
+		//[!? analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM)] println(analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM));
+		[!? analyse(USER, febbre, VALUE, DATA_TYPE, UOM)] publish "unibo/mqtt/healthhelp" for qdoctor_notification_handler -m notification : notification(USER, febbre, VALUE, DATA_TYPE, UOM);
 		removeRule analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM)
 	]
 }
@@ -146,7 +147,7 @@ QActor qdoctor_notification_handler context ctx_doctor -g white{
 	
 	Plan handleNotification [
 		println(" --- [DN] display notification: --- ");
-		onMsg notification : notification(USER_ID, RESP, PARAMETER, DATA_TYPE, UOM) -> println(RESP)		
+		onMsg notification : notification(USER_ID, RESP, PARAMETER, DATA_TYPE, UOM) -> println(notification(USER_ID, RESP, PARAMETER, DATA_TYPE, UOM))
 	]
 	switchTo wait
 }
@@ -233,7 +234,7 @@ QActor qpatient_notification_handler context ctx_patient -g green{
 	
 	Plan handleNotification [
 		println(" --- [PN] display notification: --- ");
-		onMsg notification : notification(USER_ID, RESP, PARAMETER, DATA_TYPE, UOM) -> println(RESP)		
+		onMsg notification : notification(USER_ID, RESP, PARAMETER, DATA_TYPE, UOM) -> println(notification(USER_ID, RESP, PARAMETER, DATA_TYPE, UOM))		
 	]
 	switchTo wait
 }
