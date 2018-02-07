@@ -1,5 +1,5 @@
 System qHealtHelp
-
+/*
 //DATA_TYPE is the type of parameter measured by sensor (e.g. temperature)
 //UOM is Unity of Measurement
 //PARAMETER is the numeric value registered by the sensor
@@ -9,94 +9,15 @@ Dispatch patientHistoryRequest : patientHistoryRequest(USER_ID)
 Dispatch patientHistoryResponse : patientHistoryResponse(LIST)
 Dispatch doctorHistoryRequest : doctorHistoryRequest(USER_ID)
 Dispatch doctorHistoryResponse : doctorHistoryResponse(LIST)
+Dispatch analysisRequest : analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM)
+Dispatch analysisResponse : analysisResponse(USER_ID, DESCRIPTION)
 
+Context ctx_folder ip[host= "localhost" port=3456] -g yellow
+Context ctx_patient ip[host= "localhost" port=44444] -standalone 
+Context ctx_doctor ip[host= "localhost" port=1235] -standalone 
 
-
-Context ctx_patient ip[host= "localhost" port=1234]
-Context ctx_doctor ip[host= "localhost" port=1235]
-Context ctx_folder ip[host= "localhost" port=3456]
-
-QActor qpatient_sensor_data_retriever context ctx_patient -g cyan {
-	Rules {
-		userID(42).
-		event_retrieve(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP) :- 
-			userID(USER_ID), 
-			msg(E, 'event', S,V,local_sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), N).
-	}
-	
-	Plan init normal [
-		println(" --- [P] Initialize data retriever qactor --- ")
-	]
-	switchTo wait
-	
-	Plan wait [
-		println("[P] waiting for messages")
-	] 
-	
-	transition stopAfter 86400000 
-	whenEvent local_sensordata -> sendData 
-	finally repeatPlan
-	
-	
-	Plan sendData resumeLastPlan [
-		println("[P] Sending patients data to the folder");
-		onEvent local_sensordata : local_sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP) -> memoCurrentEvent;
-		[!? event_retrieve(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP)] forward qfolder -m patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP);
-		[?? msg(E, 'event', S,V,local_sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), N)] println("")
-	] 
-}
-
-
-
-QActor qpatient_history_retriever context ctx_patient -g blue{
-	Rules {
-		userID(42).
-	}
-	
-	Plan init normal [		
-		println(" --- [H] Initialize data history retriever qactor --- ")
-	]
-	switchTo retrieving
-	
-	Plan retrieving [
-		delay 20000;
-		[!? userID(USER_ID)] forward qfolder -m patientHistoryRequest : patientHistoryRequest(USER_ID) 
-	]
-	switchTo wait
-	
-	
-	Plan wait [
-		println("[H] waiting for parameters ---")
-	]
-	transition stopAfter 86400000 
-	whenMsg patientHistoryResponse -> display 
-	
-	Plan display [
-		onMsg patientHistoryResponse : patientHistoryResponse(LIST) -> println(LIST)		
-	]
-	switchTo retrieving
-}
-
-
-
-//this qactor is related  to 1 and 2
-QActor qsensor context ctx_patient -g green{
-	Plan init normal [
-		delay 2000;
-		println("[S] Initialize a sensor")
-	] switchTo working
-	
-	Plan working [
-		println("[S] Emitting a value");
-		emit local_sensordata : local_sensordata(36, temp, celsius, "12/12/12");
-		delay 2500
-	] finally repeatPlan
-}
-
-
-
-
-QActor qfolder context ctx_folder -g yellow{
+//this qactor is related to 2, 4, 5, 7, 8
+QActor qfolder context ctx_folder {
 	Rules {
 		retrieve_message(USER_ID,LIST) :- 
 			findall(parameter(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), patient_parameter(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP), LIST),
@@ -117,52 +38,52 @@ QActor qfolder context ctx_folder -g yellow{
 	finally repeatPlan
 	
 	Plan handleData resumeLastPlan [
-		println ("[F] Received new data from patient");
-		onMsg patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP) -> addRule patient_parameter(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP);    
-		printCurrentMessage
+		println (" --- [F] Received new data from patient --- ");
+		onMsg patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP) -> demo asserta(patient_parameter(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP));    
+		[!? patient_parameter(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP)] forward qanalyser -m analysisRequest : analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM)
 	] 
 	
 	Plan retrieveDataPatient resumeLastPlan [
-		println ("[F] Requesting data for patient");
+		println (" --- [F] Requesting data for patient --- ");
 		onMsg patientHistoryRequest : patientHistoryRequest(USER_ID) -> addRule userID(USER_ID);
-		[!? retrieve_message(USER_ID,LIST)] forward qpatient_history_retriever -m patientHistoryResponse : patientHistoryResponse(LIST);
-		[?? userID(USER_ID)] println("[F] done")
+		[!? retrieve_message(USER_ID,LIST)] sendto qpatient_history_retriever in ctx_patient -m patientHistoryResponse : patientHistoryResponse(LIST);
+		[?? userID(USER_ID)] println(" --- [F] done ---")
 	]
 
 	Plan retrieveDataDoctor resumeLastPlan [
-		println ("[F] Requesting data for doctor");
+		println (" --- [F] Requesting data for doctor --- ");
 		onMsg doctorHistoryRequest : doctorHistoryRequest(USER_ID) -> addRule userID(USER_ID);
-		[!? retrieve_message(USER_ID,LIST)] forward qdoctor_history_retriever -m doctorHistoryResponse : doctorHistoryResponse(LIST);
-		[?? userID(USER_ID)] println("[F] done")
+		[!? retrieve_message(USER_ID,LIST)] sendto qdoctor_history_retriever in ctx_doctor -m doctorHistoryResponse : doctorHistoryResponse(LIST);
+		[?? userID(USER_ID)] println(" --- [F] done ---")
 	]
 }
 
-
-QActor qdoctor_history_retriever context ctx_doctor -g white{
+//this qactor is related to 3
+QActor qanalyser context ctx_folder {
 	Rules {
-		userID(42).
+		analyser(VAL, temp, celsius, febbre) :- eval(gt, VAL, 37),!.
+		analyser(VAL, temp, celsius, non_febbre) :- eval(gt, 37, VAL), !.
+		analyser(37, temp, celsius, non_febbre).
+		
+		analyse(USER, RESP) :- 
+			analyser(VALUE, DATA_TYPE, UOM, RESP), 
+			analysisRequest(USER, VALUE, DATA_TYPE, UOM).		
 	}
-	
-	Plan init normal [		
-		println(" --- [D] Initialize data history retriever qactor --- ")
-	]
-	switchTo retrieving
-	
-	Plan retrieving [
-		delay 20000;
-		[!? userID(USER_ID)] forward qfolder -m doctorHistoryRequest : doctorHistoryRequest(USER_ID) 
-	]
-	switchTo wait
-	
+	Plan init normal [
+		println(" --- [A] Initialise analyser --- ")
+	] switchTo wait
 	
 	Plan wait [
-		println("[D] waiting for parameters ---")
-	]
+		println(" --- [A] Waiting for messages --- ")
+	] 
 	transition stopAfter 86400000 
-	whenMsg doctorHistoryResponse -> display 
+	whenMsg analysisRequest -> analyse 
+	finally repeatPlan
 	
-	Plan display [
-		onMsg doctorHistoryResponse : doctorHistoryResponse(LIST) -> println(LIST)		
+	Plan analyse resumeLastPlan [
+		onMsg analysisRequest : analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM) -> addRule analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM);
+		[!? analyse(USER, RESP)] println(RESP);
+		[??analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM)] println(PARAMETER)
 	]
-	switchTo retrieving
 }
+*/
