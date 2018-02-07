@@ -1,5 +1,5 @@
 System qHealtHelp
-
+/*
 //DATA_TYPE is the type of parameter measured by sensor (e.g. temperature)
 //UOM is Unity of Measurement
 //PARAMETER is the numeric value registered by the sensor
@@ -97,3 +97,4 @@ QActor qsensor context ctx_patient {
 		delay 2500
 	] finally repeatPlan
 }
+*/
