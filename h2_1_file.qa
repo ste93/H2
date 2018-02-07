@@ -83,7 +83,8 @@ QActor qanalyser context ctx_folder {
 	
 	Plan analyse resumeLastPlan [
 		onMsg analysisRequest : analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM) -> addRule analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM);
-		[!? analyse(USER, RESP)] removeRule analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM)
+		[!? analyse(USER, RESP)] 
+		removeRule analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM)
 	]
 }
 
