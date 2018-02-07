@@ -1,6 +1,9 @@
 
 System qHealtHelp
 
+// LOAD A Docker image for mosquitto: 
+// docker run -ti -p 1883:1883 -p 9001:9001 toke/mosquitto
+
 //DATA_TYPE is the type of parameter measured by sensor (e.g. temperature)
 //UOM is Unity of Measurement
 //PARAMETER is the numeric value registered by the sensor
@@ -12,6 +15,10 @@ Dispatch doctorHistoryRequest : doctorHistoryRequest(USER_ID)
 Dispatch doctorHistoryResponse : doctorHistoryResponse(LIST)
 Dispatch analysisRequest : analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM)
 Dispatch analysisResponse : analysisResponse(USER_ID, DESCRIPTION)
+
+Dispatch notification : notification(USER_ID, RESP, PARAMETER, DATA_TYPE, UOM)
+
+pubSubServer  "tcp://localhost:1883" 	//   "tcp://m2m.eclipse.org:1883"
 
 Context ctx_folder ip[host= "localhost" port=3456] -g yellow
 Context ctx_patient ip[host= "localhost" port=44444] -g green
@@ -71,7 +78,8 @@ QActor qanalyser context ctx_folder {
 			analyser(VALUE, DATA_TYPE, UOM, RESP).	
 	}
 	Plan init normal [
-		println(" --- [A] Initialise analyser --- ")
+		println(" --- [A] Initialise analyser --- ");
+		connectAsPublisher "unibo/mqtt/healthhelp"
 	] switchTo wait
 	
 	Plan wait [
@@ -83,7 +91,7 @@ QActor qanalyser context ctx_folder {
 	
 	Plan analyse resumeLastPlan [
 		onMsg analysisRequest : analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM) -> addRule analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM);
-		[!? analyse(USER, RESP)] 
+		[!? analyse(USER, febbre)] publish "unibo/mqtt/healthhelp" for qdoctor_notification_handler -m notification : notification(USER, febbre, PARAMETER, DATA_TYPE, UOM);
 		removeRule analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM)
 	]
 }
@@ -123,6 +131,26 @@ QActor qdoctor_history_retriever context ctx_doctor {
 	switchTo retrieving
 }
 
+QActor qdoctor_notification_handler context ctx_doctor -g white{
+	Plan init normal [
+		println(" --- [DN] Initialise doctor notification handler --- ");
+		connectAsSubscriber "unibo/mqtt/healthhelp"
+	]
+	switchTo wait
+	
+	Plan wait [
+		println(" --- [DN] waiting for notification --- ")
+	]
+	transition stopAfter 86400000 
+	whenMsg notification -> handleNotification
+	
+	Plan handleNotification [
+		println(" --- [DN] display notification: --- ");
+		onMsg notification : notification(USER_ID, RESP, PARAMETER, DATA_TYPE, UOM) -> println(RESP)		
+	]
+	switchTo wait
+}
+
 
 
 
@@ -159,7 +187,7 @@ QActor qpatient_sensor_data_retriever context ctx_patient {
 
 
 //this qactor is related to 7
-QActor qpatient_history_retriever context ctx_patient {
+QActor qpatient_history_retriever context ctx_patient -g green {
 	Rules {
 		userID(42).
 	}
@@ -190,7 +218,25 @@ QActor qpatient_history_retriever context ctx_patient {
 	switchTo retrieving
 }
 
-
+QActor qpatient_notification_handler context ctx_patient -g green{
+	Plan init normal [
+		println(" --- [PN] Initialise patient notification handler --- ");
+		connectAsSubscriber "unibo/mqtt/healthhelp"
+	]
+	switchTo wait
+	
+	Plan wait [
+		println(" --- [PN] waiting for notification --- ")
+	]
+	transition stopAfter 86400000 
+	whenMsg notification -> handleNotification
+	
+	Plan handleNotification [
+		println(" --- [PN] display notification: --- ");
+		onMsg notification : notification(USER_ID, RESP, PARAMETER, DATA_TYPE, UOM) -> println(RESP)		
+	]
+	switchTo wait
+}
 
 //this qactor is related to 1
 QActor qsensor context ctx_patient {
