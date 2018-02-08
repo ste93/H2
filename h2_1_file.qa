@@ -8,7 +8,9 @@ System qHealtHelp
 //UOM is Unity of Measurement
 //PARAMETER is the numeric value registered by the sensor
 Event local_sensordata : local_sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP)
+
 Event idpatient : idpatient(X)
+Event iddoctor : iddoctor(X)
 Dispatch patientsData_msg : patientsData(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP)
 Dispatch patientHistoryRequest : patientHistoryRequest(USER_ID)
 Dispatch patientHistoryResponse : patientHistoryResponse(LIST)
@@ -21,20 +23,41 @@ Dispatch notification : notification(USER_ID, RESP, PARAMETER, DATA_TYPE, UOM)
 
 pubSubServer  "tcp://localhost:1883" 	//   "tcp://m2m.eclipse.org:1883"
 
-Context ctx_doctor ip[host= "localhost" port=1235] -g white 
-Context ctx_folder ip[host= "localhost" port=3456] -g yellow 
-Context ctx_patient ip[host= "localhost" port=44444] -httpserver
-EventHandler evh for idpatient -print { memoCurrentEvent for qpatient_history_retriever;
-										memoCurrentEvent for qpatient_notification_handler;
-										memoCurrentEvent for qpatient_sensor_data_retriever
-										};
+Context ctx_doctor  ip[host= "localhost" port=1235]  -g white 
+Context ctx_folder  ip[host= "localhost" port=3456]  -g yellow 
+Context ctx_patient ip[host= "localhost" port=44444] -g green -httpserver
+
+EventHandler evh for iddoctor, idpatient -print; 
+								/*{ memoCurrentEvent for qpatient_history_retriever;
+								  //memoCurrentEvent for qpatient_notification_handler;
+								    memoCurrentEvent for qpatient_sensor_data_retriever
+			
+								};*/
+/* 							
+QActor qpatient_login_manager context ctx_login -g gray{
+	Plan login normal [
+		println(" --- [L] Initialize patient loginner --- ");
+		delay 5000; 
+		emit h2 : h2(idpatient(12345678))//idpatient : idpatient(12345678)
+	] finally repeatPlan
+}
+
+QActor qdoctor_login_manager context ctx_login -g gray{
+	Plan login normal [
+		println(" --- [L] Initialize doctor loginner --- ");
+		delay 5000; 
+		emit h2 : h2(iddoctor(12345678))
+	] finally repeatPlan
+}
+
+*/
 
 //this qactor is related to 2, 4, 5, 7, 8
 QActor qfolder context ctx_folder {
 	Rules {
 		retrieve_message(USER_ID,LIST) :- 
 			findall(parameter(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), patient_parameter(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP), LIST),
-			userID(USER_ID).
+			idpatient(USER_ID).
 	}
 	Plan init normal [
 		println(" --- [F] Initialize folder --- ")
@@ -58,16 +81,16 @@ QActor qfolder context ctx_folder {
 	
 	Plan retrieveDataPatient resumeLastPlan [
 		println (" --- [F] Requesting data for patient --- ");
-		onMsg patientHistoryRequest : patientHistoryRequest(USER_ID) -> addRule userID(USER_ID);
+		onMsg patientHistoryRequest : patientHistoryRequest(USER_ID) -> addRule idpatient(USER_ID);
 		[!? retrieve_message(USER_ID,LIST)] sendto qpatient_history_retriever in ctx_patient -m patientHistoryResponse : patientHistoryResponse(LIST);
-		[?? userID(USER_ID)] println(" --- [F] done ---")
+		[?? idpatient(USER_ID)] println(" --- [F] done ---")
 	]
 
 	Plan retrieveDataDoctor resumeLastPlan [
 		println (" --- [F] Requesting data for doctor --- ");
-		onMsg doctorHistoryRequest : doctorHistoryRequest(USER_ID) -> addRule userID(USER_ID);
+		onMsg doctorHistoryRequest : doctorHistoryRequest(USER_ID) -> addRule idpatient(USER_ID);
 		[!? retrieve_message(USER_ID,LIST)] sendto qdoctor_history_retriever in ctx_doctor -m doctorHistoryResponse : doctorHistoryResponse(LIST);
-		[?? userID(USER_ID)] println(" --- [F] done ---")
+		[?? idpatient(USER_ID)] println(" --- [F] done ---")
 	]
 }
 
@@ -98,7 +121,7 @@ QActor qanalyser context ctx_folder {
 	Plan analyse resumeLastPlan [
 		onMsg analysisRequest : analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM) -> addRule analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM);
 		//[!? analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM)] println(analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM));
-		[!? analyse(USER, febbre, VALUE, DATA_TYPE, UOM)] publish "unibo/mqtt/healthhelp" for qdoctor_notification_handler -m notification : notification(USER, febbre, VALUE, DATA_TYPE, UOM);
+		//[!? analyse(USER, febbre, VALUE, DATA_TYPE, UOM)] publish "unibo/mqtt/healthhelp" for qdoctor_notification_handler -m notification : notification(USER, febbre, VALUE, DATA_TYPE, UOM);
 		removeRule analysisRequest(USER_ID, PARAMETER, DATA_TYPE, UOM)
 	]
 }
@@ -111,9 +134,17 @@ QActor qdoctor_history_retriever context ctx_doctor {
 	}
 	
 	Plan init normal [		
-		println(" --- [D] Initialise data history retriever qactor --- ")
+		println(" --- [D] Initialise data history retriever qactor --- ");
+		println(" --- [D] Waiting for login ---")
 	]
-	switchTo retrieving
+	transition stopAfter 86400000 
+	whenEvent iddoctor -> registerID
+
+	
+	Plan registerID [
+		onEvent iddoctor : iddoctor(X) -> addRule iddoctor(X);
+		[!? iddoctor(X)] println(" --- [D] received id --- ")
+	] switchTo retrieving
 	
 	Plan retrieving [
 		delay 20000;
@@ -137,7 +168,7 @@ QActor qdoctor_history_retriever context ctx_doctor {
 }
 
 
-QActor qdoctor_notification_handler context ctx_doctor -g white{
+/*QActor qdoctor_notification_handler context ctx_doctor -g white{
 	Plan init normal [
 		println(" --- [DN] Initialise doctor notification handler --- ");
 		connectAsSubscriber "unibo/mqtt/healthhelp"
@@ -156,27 +187,26 @@ QActor qdoctor_notification_handler context ctx_doctor -g white{
 	]
 	switchTo wait
 }
+* 
+*/
 
 
 //this qactor is related to 1 and 2
 QActor qpatient_sensor_data_retriever context ctx_patient -g green{
 	Rules {
 		event_retrieve(USER_ID, PARAMETER, DATA_TYPE, UOM, TIMESTAMP) :- 
-			userID(USER_ID), 
+			idpatient(USER_ID), 
 			msg(E, 'event', S,V,local_sensordata(PARAMETER, DATA_TYPE, UOM, TIMESTAMP), N).
 	}
 	
 	Plan init normal [
 		println(" --- [P] Initialize data retriever qactor --- ")
-	] switchTo waitForID
-	
-	Plan waitForID[
-		[!? msg(E, A, S,B,M, N)] switchTo registerID;
-		delay 300
-	] finally repeatPlan 
+	] transition stopAfter 86400000 
+	  whenEvent idpatient -> registerID
+
 	
 	Plan registerID [
-		[?? msg(E, A, S,B,M, N)] addRule M;
+		onEvent idpatient : idpatient(X) -> addRule idpatient(X) ;
 		[!? idpatient(X)] println(" --- [P] received id --- ")
 	] switchTo wait
 	
@@ -201,22 +231,19 @@ QActor qpatient_history_retriever context ctx_patient -g green{
 
 	Plan init normal [		
 		println(" --- [H] Initialize data history retriever qactor --- ")
-	] switchTo waitForID
-	
-	Plan waitForID[
-		[!? msg(E, A, S,B,M, N)] switchTo registerID;
-		delay 300
-	] finally repeatPlan 
+	] transition stopAfter 86400000 
+	  whenEvent idpatient -> registerID
+
 	
 	Plan registerID [
-		[?? msg(E, A, S,B,M, N)] addRule M;
+		onEvent idpatient : idpatient(X) -> addRule idpatient(X) ;
 		[!? idpatient(X)] println(" --- [H] received id --- ")
-	] switchTo retrieving
+	] switchTo wait
 	
 	Plan retrieving [
 		delay 20000;
 		println(" --- [H] Asking for patient data --- ");
-		[!? userID(USER_ID)] sendto qfolder in ctx_folder -m patientHistoryRequest : patientHistoryRequest(USER_ID) 
+		[!? idpatient(USER_ID)] sendto qfolder in ctx_folder -m patientHistoryRequest : patientHistoryRequest(USER_ID) 
 	]
 	switchTo wait
 	
@@ -234,6 +261,7 @@ QActor qpatient_history_retriever context ctx_patient -g green{
 	switchTo retrieving
 }
 
+/*
 QActor qpatient_notification_handler context ctx_patient -g green	{
 	Plan init normal [
 		println(" --- [PN] Initialise patient notification handler --- ")
@@ -263,6 +291,7 @@ QActor qpatient_notification_handler context ctx_patient -g green	{
 	]
 	switchTo wait
 }
+* */
 
 //this qactor is related to 1
 QActor qsensor context ctx_patient {
