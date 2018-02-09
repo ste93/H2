@@ -4,7 +4,7 @@ Dispatch sending_patient_parameter : sending_patient_parameter(PARAMETER, TIMEST
 Dispatch patient_parameters_request : patient_parameters_request
 Dispatch patient_parameters_response : patient_parameters_response(LIST)
 
-//requisiti business 1,2,3 e funzionale 1,2
+//requisiti business 1,2 e funzionale 1,2
 Context ctx_data_centre ip[host="localhost" port=8070] -g cyan
 Context ctx_patient 	ip[host="localhost" port=1234] -g green
 Context ctx_doctor  	ip[host="localhost" port=3456] -g white
@@ -66,50 +66,15 @@ QActor qdata_centre context ctx_data_centre {
 	  whenMsg patient_parameters_request -> handleRequest
 	  finally repeatPlan
 	  
-	Plan saveParameter [
+	Plan saveParameter resumeLastPlan [
 		println(" --- [DC] saving parameters --- ");
-		onMsg sending_patient_parameter : sending_patient_parameter(PARAMETER, TIMESTAMP) -> demo asserta(patient_parameter(PARAMETER, TIMESTAMP))
-	] switchTo sendToAnalyser
-	
-	Plan sendToAnalyser [
-		println(" --- [DC] sending to analyser --- ");
-		[!? patient_parameter(PARAMETER, TIMESTAMP)] forward qanalyser -m sending_patient_parameter : sending_patient_parameter(PARAMETER, TIMESTAMP) 
-	] switchTo waitParameter
+		onMsg sending_patient_parameter : sending_patient_parameter(PARAMETER, TIMESTAMP) -> addRule patient_parameter(PARAMETER, TIMESTAMP)
+	]
 	
 	Plan handleRequest resumeLastPlan [
 		println(" --- [DC] handling parameters request --- ");
 		onMsg patient_parameters_request : patient_parameters_request -> actorOp memoCurrentCaller;
 		[!? request_parameters(LIST)] replyToCaller -m patient_parameters_response : patient_parameters_response(LIST)		
-	]
-	
-}
-
-QActor qanalyser context ctx_data_centre {
-	Rules {
-		analyser(VAL, febbre) :- eval(gt, VAL, 37),!.
-		analyser(VAL, non_febbre) :- eval(gt, 37, VAL), !.
-		analyser(37, non_febbre).
-		
-		analyse(RESP) :- 
-			parameter(PARAMETER),
-			analyser(PARAMETER, RESP).
-	}
-	
-	Plan init normal [
-		println(" --- [A] initialising --- ")	
-	] switchTo waitParameter
-	
-	Plan waitParameter [
-		println(" --- [A] waiting parameter--- ")
-	] transition stopAfter 86400000
-	  whenMsg sending_patient_parameter -> analyse
-	  finally repeatPlan
-	  
-	Plan analyse resumeLastPlan [
-		println(" --- [A] analysing parameter--- ");
-		onMsg sending_patient_parameter : sending_patient_parameter(PARAMETER, TIMESTAMP) -> addRule parameter(PARAMETER);
-		[!? analyse(RESP)] println(RESP);
-		[!? analyse(RESP)] removeRule parameter(PARAMETER)		
 	]
 	
 }
