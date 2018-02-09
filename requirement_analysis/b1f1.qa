@@ -1,6 +1,6 @@
 System h2
 
-Dispatch patient_parameter : patient_parameter(USER_ID, PARAMETER, TIMESTAMP)
+Dispatch patient_parameter : patient_parameter(PARAMETER, TIMESTAMP)
 
 //requisiti business 1 e funzionale 1
 Context ctx_data_centre ip[host="localhost" port=8070] -g cyan
@@ -14,11 +14,11 @@ QActor qpatient context ctx_patient {
 	
 	Plan sendData [
 		println(" --- [P] sending data --- ");
-		forward qdata_centre -m patient_parameter : patient_parameter(42, 37, "12/12/12");
+		forward qdata_centre -m patient_parameter : patient_parameter(37, "12/12/12");
 		delay 2500;
-		forward qdata_centre -m patient_parameter : patient_parameter(42, 38, "12/12/12");
+		forward qdata_centre -m patient_parameter : patient_parameter(38, "12/12/12");
 		delay 2500;
-		forward qdata_centre -m patient_parameter : patient_parameter(42, 36, "12/12/12");
+		forward qdata_centre -m patient_parameter : patient_parameter(36, "12/12/12");
 		delay 2500
 	] finally repeatPlan
 	
@@ -38,7 +38,7 @@ QActor qdata_centre context ctx_data_centre {
 	  
 	Plan saveParameter resumeLastPlan [
 		println(" --- [DC] saving parameters --- ");
-		onMsg patient_parameter : patient_parameter(USER_ID, PARAMETER, TIMESTAMP) -> addRule patient_parameter(USER_ID, PARAMETER, TIMESTAMP)
+		onMsg patient_parameter : patient_parameter(PARAMETER, TIMESTAMP) -> addRule patient_parameter(PARAMETER, TIMESTAMP)
 	]
 	
 }
