@@ -5,7 +5,7 @@ Dispatch patient_parameters_request : patient_parameters_request
 Dispatch patient_parameters_response : patient_parameters_response(LIST)
 Dispatch notification : notification(DESCRIPTION)
 
-//requisiti business 1,2,3,4 e funzionale 1,2,3,4,5
+//requirements: business 1,2,3,4 e functional 1,2,3,4,5
 Context ctx_data_centre ip[host="localhost" port=8070] -g cyan
 Context ctx_patient 	ip[host="localhost" port=1234] -g green
 Context ctx_doctor  	ip[host="localhost" port=3456] -g white
@@ -18,11 +18,11 @@ QActor qpatient_sender context ctx_patient {
 	
 	Plan sendData [
 		println(" --- [PS] sending data --- ");
-		forward qdata_centre -m sending_patient_parameter : sending_patient_parameter(37, "12/12/12");
+		forward qdc_data_receiver -m sending_patient_parameter : sending_patient_parameter(37, "12/12/12");
 		delay 2500;
-		forward qdata_centre -m sending_patient_parameter : sending_patient_parameter(38, "12/12/12");
+		forward qdc_data_receiver -m sending_patient_parameter : sending_patient_parameter(38, "12/12/12");
 		delay 2500;
-		forward qdata_centre -m sending_patient_parameter : sending_patient_parameter(36, "12/12/12");
+		forward qdc_data_receiver -m sending_patient_parameter : sending_patient_parameter(36, "12/12/12");
 		delay 2500
 	] finally repeatPlan
 	
@@ -35,9 +35,9 @@ QActor qpatient_data_retriver context ctx_patient {
 	] switchTo requestData
 	
 	Plan requestData [
-		delay 3000;
 		println(" --- [PR] requesting data --- ");
-		forward qdata_centre -m patient_parameters_request : patient_parameters_request
+		delay 3000;
+		forward qdc_data_receiver -m patient_parameters_request : patient_parameters_request
 	] switchTo waitResponse
 	
 	Plan waitResponse resumeLastPlan [
@@ -60,26 +60,27 @@ QActor qpatient_notification_receiver context ctx_patient {
 	Plan waitNotification [
 		println(" --- [PNR] waiting notification --- ")
 	] transition stopAfter 86400000
-	  whenMsg notification -> receiveNotification
+	  whenMsg notification -> visualizeNotification
 	  finally repeatPlan
 	  
-	Plan receiveNotification resumeLastPlan [
+	Plan visualizeNotification resumeLastPlan [
 		println(" --- [PNR] receive notification --- ");
 		onMsg notification : notification(DESCRIPTION) -> println(DESCRIPTION)
 	]
 	
 }
 
-QActor qdata_centre context ctx_data_centre {
+QActor qdc_data_receiver context ctx_data_centre {
+	
 	Rules {
 		request_parameters(LIST) :- findall(patient_parameter(X,Y), patient_parameter(X, Y),LIST).
 	}
 	
 	Plan init normal [
 		println(" --- [DC] initializing --- ")	
-	] switchTo waitParameter
+	] switchTo waitMessages
 	
-	Plan waitParameter [
+	Plan waitMessages [
 		println(" --- [DC] waiting messages --- ")
 	] transition stopAfter 86400000
 	  whenMsg sending_patient_parameter -> saveParameter,
@@ -93,8 +94,8 @@ QActor qdata_centre context ctx_data_centre {
 	
 	Plan sendToAnalyser [
 		println(" --- [DC] sending to analyzer --- ");
-		[!? patient_parameter(PARAMETER, TIMESTAMP)] forward qanalyser -m sending_patient_parameter : sending_patient_parameter(PARAMETER, TIMESTAMP) 
-	] switchTo waitParameter
+		[!? patient_parameter(PARAMETER, TIMESTAMP)] forward qdc_analyser -m sending_patient_parameter : sending_patient_parameter(PARAMETER, TIMESTAMP) 
+	] switchTo waitMessages
 	
 	Plan handleRequest resumeLastPlan [
 		println(" --- [DC] handling parameters request --- ");
@@ -104,7 +105,8 @@ QActor qdata_centre context ctx_data_centre {
 	
 }
 
-QActor qanalyser context ctx_data_centre {
+QActor qdc_analyser context ctx_data_centre {
+	
 	Rules {
 		analyser(VAL, febbre) :- eval(gt, VAL, 37),!.
 		analyser(VAL, non_febbre) :- eval(gt, 37, VAL), !.
@@ -129,13 +131,14 @@ QActor qanalyser context ctx_data_centre {
 		println(" --- [A] analyzing parameter--- ");
 		onMsg sending_patient_parameter : sending_patient_parameter(PARAMETER, TIMESTAMP) -> addRule parameter(PARAMETER);
 		[!? analyse(RESP)] println(RESP);
-		[!? analyse(RESP)] forward qnotification_manager -m notification : notification(RESP);	
+		[!? analyse(RESP)] forward qdc_notification_manager -m notification : notification(RESP);	
 		[!? analyse(RESP)] removeRule parameter(PARAMETER)
 	]
 	
 }
 
-QActor qnotification_manager context ctx_data_centre {
+QActor qdc_notification_manager context ctx_data_centre {
+	
 	Rules {
 		send_to_doctor(febbre) :- notification(febbre).
 	}
@@ -168,7 +171,7 @@ QActor qdoctor_data_retriver context ctx_doctor {
 	Plan requestData [
 		delay 3000;
 		println(" --- [D] requesting data --- ");
-		forward qdata_centre -m patient_parameters_request : patient_parameters_request
+		forward qdc_data_receiver -m patient_parameters_request : patient_parameters_request
 	] switchTo waitResponse
 	
 	Plan waitResponse resumeLastPlan [
