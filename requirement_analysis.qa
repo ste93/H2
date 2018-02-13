@@ -241,7 +241,7 @@ QActor qdoctor_notification_sender context ctx_doctor {
 	Plan sendNotification [
 		println(" --- [DNS] sending notification --- ");
 		onEvent doctor_notification_sender : doctor_notification_sender(NOTIFICATION) -> forward qpatient_notification_receiver -m notification : notification(NOTIFICATION);
-		actorOp print("advice send to patient")
+		actorOp print("advice sent to the patient")
 		//delay 60000
 	] switchTo waitInput
 	
