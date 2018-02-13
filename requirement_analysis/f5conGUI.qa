@@ -189,7 +189,7 @@ QActor qdoctor_data_retriever context ctx_doctor {
 	  finally repeatPlan
 	
 	Plan requestData [
-		delay 3000;
+		//delay 3000;
 		println(" --- [D] requesting data --- ");
 		forward qdc_data_receiver -m patient_parameters_request : patient_parameters_request
 	] switchTo waitResponse
@@ -228,14 +228,22 @@ QActor qdoctor_notification_receiver context ctx_doctor {
 QActor qdoctor_notification_sender context ctx_doctor {
 	
 	Plan init normal [
-		println(" --- [DNS] initializing --- ")	
-	] switchTo sendNotification
+		println(" --- [DNS] initializing --- ");
+		actorOp createGUI	
+	] switchTo waitInput
+	
+	Plan waitInput [
+		println(" --- [DNS] waiting input --- ")
+	] transition stopAfter 86400000
+	  whenEvent doctor_notification_sender -> sendNotification
+	  finally repeatPlan
 	
 	Plan sendNotification [
 		println(" --- [DNS] sending notification --- ");
-		forward qpatient_notification_receiver -m notification : notification("I notify you about...");
-		delay 60000
-	] finally repeatPlan
+		onEvent doctor_notification_sender : doctor_notification_sender(NOTIFICATION) -> forward qpatient_notification_receiver -m notification : notification(NOTIFICATION);
+		actorOp print("advice send to patient")
+		//delay 60000
+	] switchTo waitInput
 	
 }
 
