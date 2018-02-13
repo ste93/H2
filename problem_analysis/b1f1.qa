@@ -1,0 +1,44 @@
+System h2
+
+Dispatch patient_parameter : patient_parameter(PARAMETER, TIMESTAMP)
+
+//requisiti business 1 e funzionale 1
+Context ctx_data_centre ip[host="localhost" port=8070] -g cyan
+Context ctx_patient 	ip[host="localhost" port=1234] -g green
+
+QActor qpatient context ctx_patient {
+	
+	Plan init normal [
+		println(" --- [P] initialising --- ")	
+	] switchTo sendData
+	
+	Plan sendData [
+		println(" --- [P] sending data --- ");
+		forward qdata_centre -m patient_parameter : patient_parameter(37, "12/12/12");
+		delay 2500;
+		forward qdata_centre -m patient_parameter : patient_parameter(38, "12/12/12");
+		delay 2500;
+		forward qdata_centre -m patient_parameter : patient_parameter(36, "12/12/12");
+		delay 2500
+	] finally repeatPlan
+	
+}
+
+QActor qdata_centre context ctx_data_centre {
+	
+	Plan init normal [
+		println(" --- [DC] initialising --- ")	
+	] switchTo waitParameter
+	
+	Plan waitParameter [
+		println(" --- [DC] waiting parameters --- ")
+	] transition stopAfter 86400000
+	  whenMsg patient_parameter -> saveParameter
+	  finally repeatPlan
+	  
+	Plan saveParameter resumeLastPlan [
+		println(" --- [DC] saving parameters --- ");
+		onMsg patient_parameter : patient_parameter(PARAMETER, TIMESTAMP) -> addRule patient_parameter(PARAMETER, TIMESTAMP)
+	]
+	
+}

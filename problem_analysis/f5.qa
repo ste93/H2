@@ -4,40 +4,11 @@ Dispatch sending_patient_parameter : sending_patient_parameter(PARAMETER, TIMEST
 Dispatch patient_parameters_request : patient_parameters_request
 Dispatch patient_parameters_response : patient_parameters_response(LIST)
 Dispatch notification : notification(DESCRIPTION)
-Dispatch login_response : login_response(DESCRIPTION)
-Event    patient_data_request : patient_data_request
-Event    doctor_data_request : doctor_data_request
-Event    doctor_notification_sender : doctor_notification_sender(NOTIFICATION)
-Event    register_request : register_request(NICKNAME,TYPE)
-Event    login_request : login_request(NICKNAME, NAME)
-
 
 //requirements: business 1,2,3,4 e functional 1,2,3,4,5
-Context ctx_data_centre 	ip[host="localhost" port=8070] //-g cyan
-Context ctx_patient 		ip[host="localhost" port=1234] //-g green
-Context ctx_doctor  		ip[host="localhost" port=3456] //-g white
-Context ctx_create_actors  	ip[host="localhost" port=4678] //-g white
-
-EventHandler evh for patient_data_request, doctor_data_request, doctor_notification_sender, register_request, login_request -print;
-
-QActor qpatient_login context ctx_patient {
-	
-	Plan init normal [
-		println(" --- [PL] initializing --- ");
-		actorOp createGUI	
-	] switchTo waitResponse
-	
-	Plan waitResponse [
-		println(" --- [PL] waiting response --- ")
-	] transition stopAfter 120000
-	  whenMsg login_response -> loginResponse
-	  finally repeatPlan
-	  
-	Plan loginResponse [
-		println(" --- [PL] login response --- ");
-		onMsg login_response : login_response(DESCRIPTION) -> actorOp print(DESCRIPTION)
-	] 
-}
+Context ctx_data_centre ip[host="localhost" port=8070] -g cyan
+Context ctx_patient 	ip[host="localhost" port=1234] -g green
+Context ctx_doctor  	ip[host="localhost" port=3456] -g white
 
 QActor qpatient_sender context ctx_patient {
 	
@@ -57,34 +28,27 @@ QActor qpatient_sender context ctx_patient {
 	
 }
 
-QActor qpatient_data_retriever context ctx_patient -g gray {
+QActor qpatient_data_retriver context ctx_patient {
 	
 	Plan init normal [
-		println(" --- [PR] initializing --- ");
-		actorOp createGUI
-	] switchTo waitUserRequest
-	  
-	Plan waitUserRequest [
-		println(" --- [PR] waiting for user request --- ")
-	] transition stopAfter 86400000
-	  whenEvent patient_data_request -> requestData
-	  finally repeatPlan
+		println(" --- [PR] initializing --- ")	
+	] switchTo requestData
 	
 	Plan requestData [
 		println(" --- [PR] requesting data --- ");
-		//delay 3000;
+		delay 3000;
 		forward qdc_data_receiver -m patient_parameters_request : patient_parameters_request
 	] switchTo waitResponse
 	
 	Plan waitResponse resumeLastPlan [
 		println(" --- [PR] waiting for a response --- ")
-	] transition stopAfter 600000
+	] transition stopAfter 60000
 	  whenMsg patient_parameters_response -> visualiseData
 	  
 	Plan visualiseData [
 		println(" --- [PR] visualizing data --- ");
-		onMsg patient_parameters_response : patient_parameters_response(LIST) -> actorOp print(LIST)
-	] switchTo waitUserRequest
+		onMsg patient_parameters_response : patient_parameters_response(LIST) -> println(LIST)
+	] switchTo requestData
 }
 
 QActor qpatient_notification_receiver context ctx_patient {
@@ -198,80 +162,14 @@ QActor qdc_notification_manager context ctx_data_centre {
 	
 }
 
-QActor qdc_user_manager context ctx_data_centre {
-	
-	Rules {
-		alreadyRegistered :- registration(NICKNAME, _), registered(NICKNAME,_).
-		
-		correct_registration :- registration(NICKNAME,TYPE), assert(registered(NICKNAME,TYPE)), retract(registration(_,_)).
-		
-		can_login(NAME) :- login(NICKNAME,NAME), registered(NICKNAME,_).
-	}
-	
-	Plan init normal [
-		println(" --- [UM] initializing --- ");
-		actorOp createGUI
-	] switchTo waitNotification
-	
-	Plan waitNotification [
-		println(" --- [UM] waiting notification --- ")
-	] transition stopAfter 86400000
-	  whenEvent register_request -> registration,
-	  whenEvent login_request -> login
-	  finally repeatPlan
-	  
-	Plan registration resumeLastPlan [
-		println(" --- [UM] registration --- ");
-		onEvent register_request : register_request(NICKNAME, TYPE) -> addRule registration(NICKNAME, TYPE);
-		[!? alreadyRegistered] actorOp print("This user name is already used. Choose another one!");
-		[!? alreadyRegistered] removeRule registration(_,_);
-		[!? correct_registration] actorOp print("Registration complete!")		
-	]
-	
-	Plan login resumeLastPlan [
-		println(" --- [UM] login --- ");
-		removeRule login(_);
-		onEvent login_request : login_request(NICKNAME, NAME) -> addRule login(NICKNAME, NAME);
-		[!? can_login(NAME)] actorOp print(NAME);
-		[!? can_login(NAME)] forward NAME -m login_response : login_response("Login complete") else forward NAME -m login_response : login_response("The user name is not present!")
-	]
-	
-}
-
-QActor qdoctor_login context ctx_doctor {
-	
-	Plan init normal [
-		println(" --- [DL] initializing --- ");
-		actorOp createGUI	
-	] switchTo waitResponse
-	
-	Plan waitResponse [
-		println(" --- [DL] waiting response --- ")
-	] transition stopAfter 120000
-	  whenMsg login_response -> loginResponse
-	  finally repeatPlan
-	  
-	Plan loginResponse [
-		println(" --- [DL] login response --- ");
-		onMsg login_response : login_response(DESCRIPTION) -> actorOp print(DESCRIPTION)
-	] 
-}
-
-QActor qdoctor_data_retriever context ctx_doctor {
+QActor qdoctor_data_retriver context ctx_doctor {
 		
 	Plan init normal [
-		println(" --- [D] initializing --- ")	;
-		actorOp createGUI
-	] switchTo waitUserRequest
-	  
-	Plan waitUserRequest [
-		println(" --- [D] waiting for user request --- ")
-	] transition stopAfter 86400000
-	  whenEvent doctor_data_request -> requestData
-	  finally repeatPlan
+		println(" --- [D] initializing --- ")	
+	] switchTo requestData
 	
 	Plan requestData [
-		//delay 3000;
+		delay 3000;
 		println(" --- [D] requesting data --- ");
 		forward qdc_data_receiver -m patient_parameters_request : patient_parameters_request
 	] switchTo waitResponse
@@ -283,8 +181,8 @@ QActor qdoctor_data_retriever context ctx_doctor {
 	  
 	Plan visualiseData [
 		println(" --- [D] visualizing data --- ");
-		onMsg patient_parameters_response : patient_parameters_response(LIST) -> actorOp print(LIST)
-	] switchTo waitUserRequest
+		onMsg patient_parameters_response : patient_parameters_response(LIST) -> println(LIST)
+	] switchTo requestData
 	
 }
 
@@ -310,35 +208,14 @@ QActor qdoctor_notification_receiver context ctx_doctor {
 QActor qdoctor_notification_sender context ctx_doctor {
 	
 	Plan init normal [
-		println(" --- [DNS] initializing --- ");
-		actorOp createGUI	
-	] switchTo waitInput
-	
-	Plan waitInput [
-		println(" --- [DNS] waiting input --- ")
-	] transition stopAfter 86400000
-	  whenEvent doctor_notification_sender -> sendNotification
-	  finally repeatPlan
+		println(" --- [DNS] initializing --- ")	
+	] switchTo sendNotification
 	
 	Plan sendNotification [
 		println(" --- [DNS] sending notification --- ");
-		onEvent doctor_notification_sender : doctor_notification_sender(NOTIFICATION) -> forward qpatient_notification_receiver -m notification : notification(NOTIFICATION);
-		actorOp print("advice sent to the patient")
-		//delay 60000
-	] switchTo waitInput
-	
-}
-
-QActor qcreate_actors context ctx_create_actors {
-	
-	Plan init normal [
-		println(" --- [CA] initializing --- ")
-	] switchTo createActors
-	
-	Plan createActors [
-		println(" --- [CA] creating actors --- ");
-		[!? newName(qpatient_data_retriver, Name, N)] demo createActor(Name, 'it.unibo.qpatient_data_retriever.Qpatient_data_retriever')
-	] finally repeatPlan 10
+		forward qpatient_notification_receiver -m notification : notification("I notify you about...");
+		delay 60000
+	] finally repeatPlan
 	
 }
 
