@@ -9,7 +9,7 @@ Event    patient_data_request : patient_data_request
 Event    doctor_data_request : doctor_data_request
 Event    doctor_notification_sender : doctor_notification_sender(NOTIFICATION)
 Event    register_request : register_request(NICKNAME,TYPE)
-Event    login_request : login_request(NICKNAME, NAME)
+Event    login_request : login_request(NICKNAME,TYPE,NAME)
 Event    patient_login : patient_login
 Event    doctor_login : doctor_login
 
@@ -229,7 +229,7 @@ QActor qdc_user_manager context ctx_data_centre {
 		
 		correct_registration :- registration(NICKNAME,TYPE), assert(registered(NICKNAME,TYPE)), retract(registration(_,_)).
 		
-		can_login(NAME) :- login(NICKNAME,NAME), registered(NICKNAME,_), retract(login(_,_)).
+		can_login(NAME) :- login(NICKNAME,TYPE,NAME), registered(NICKNAME,TYPE), retract(login(_,_,_)).
 	}
 	
 	Plan init normal [
@@ -254,9 +254,9 @@ QActor qdc_user_manager context ctx_data_centre {
 	
 	Plan login resumeLastPlan [
 		println(" --- [UM] login --- ");
-		onEvent login_request : login_request(NICKNAME, NAME) -> addRule login(NICKNAME, NAME);
+		onEvent login_request : login_request(NICKNAME,TYPE,NAME) -> addRule login(NICKNAME,TYPE,NAME);
 		[!? can_login(NAME)] forward NAME -m login_response : login_response("Login ok");
-		[?? login(_, NAME)] forward NAME -m login_response : login_response("Login failed")
+		[?? login(_,_,NAME)] forward NAME -m login_response : login_response("Login failed")
 		
 	]
 	

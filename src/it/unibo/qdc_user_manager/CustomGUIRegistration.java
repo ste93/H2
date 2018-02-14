@@ -64,7 +64,7 @@ public class CustomGUIRegistration extends SituatedPlainObject {
 			switch (cmd) {
 			case "DOCTOR REGISTRATION":	
 				try {
-					QActorUtils.raiseEvent(ctx, "input", "register_request", "register_request(" + input + ",D)");
+					QActorUtils.raiseEvent(ctx, "input", "register_request", "register_request(" + input + ",d)");
 				} catch (Exception e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -72,7 +72,7 @@ public class CustomGUIRegistration extends SituatedPlainObject {
 				break;
 			case "PATIENT REGISTRATION":
 				try {
-					QActorUtils.raiseEvent(ctx, "input", "register_request", "register_request(" + input + ",P)");
+					QActorUtils.raiseEvent(ctx, "input", "register_request", "register_request(" + input + ",p)");
 				} catch (Exception e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();

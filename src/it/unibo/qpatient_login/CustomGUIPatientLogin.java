@@ -65,7 +65,7 @@ public class CustomGUIPatientLogin extends SituatedPlainObject {
 //			println("CmdHandler -> " + cmd + " input= " + input);
 			String acId = actorId.substring(0, actorId.length()-5);
 			try {
-				QActorUtils.raiseEvent(ctx, "input", "login_request", "login_request(" + input + "," + acId + ")");
+				QActorUtils.raiseEvent(ctx, "input", "login_request", "login_request(" + input + ",p," + acId + ")");
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
