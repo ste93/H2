@@ -2,20 +2,20 @@
 /*
 This code is generated only ONCE
 */
-package it.unibo.qpatient_login;
+package it.unibo.qpatient_notification_receiver;
 import java.awt.Color;
 
 import it.unibo.baseEnv.basicFrame.EnvFrame;
 import it.unibo.is.interfaces.IBasicEnvAwt;
 import it.unibo.is.interfaces.IOutputEnvView;
 import it.unibo.qactors.QActorContext;
-import it.unibo.qdoctor_login.CustomGUIDoctorLogin;
+import it.unibo.qdoctor_notification_receiver.CustomGUIDoctorNotifReceiver;
 
-public class Qpatient_login extends AbstractQpatient_login { 
+public class Qpatient_notification_receiver extends AbstractQpatient_notification_receiver { 
 	
-	private CustomGUIPatientLogin gui;
+	private CustomGUIPatientNotifReceiver gui;
 
-	public Qpatient_login(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
+	public Qpatient_notification_receiver(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
 		super(actorId, myCtx, outEnvView);
 	}
 /*
@@ -33,11 +33,11 @@ public class Qpatient_login extends AbstractQpatient_login {
 	public void createGUI() {
 		IBasicEnvAwt env = outEnvView.getEnv();
 		if(env == null) {
-			env = new EnvFrame("H2-Patient Login", Color.green, Color.black);
+			env = new EnvFrame("H2-Patient Notification Receiver", Color.green, Color.black);
 			env.init();
 			((EnvFrame)env).setSize(800,430);
 		}
-		env.writeOnStatusBar("H2-Patient Login" + " | working ... ",14);
-		gui = new CustomGUIPatientLogin(env,actorId,myCtx);
+		env.writeOnStatusBar("H2-Patient Notification Receiver" + " | working ... ",14);
+		gui = new CustomGUIPatientNotifReceiver(env,actorId,myCtx);
 	}
 }

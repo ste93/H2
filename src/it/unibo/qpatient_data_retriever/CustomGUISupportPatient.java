@@ -60,7 +60,7 @@ public class CustomGUISupportPatient extends SituatedPlainObject {
 		@Override
 		public void execAction(String cmd) {
 			String input = env.readln();
-			println("CmdHandler -> " + cmd + " input= " + input);
+//			println("CmdHandler -> " + cmd + " input= " + input);
 			try {
 				QActorUtils.raiseEvent(ctx, "input", "patient_data_request", "patient_data_request");
 			} catch (Exception e) {

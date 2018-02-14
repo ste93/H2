@@ -35,7 +35,7 @@ public class Qpatient_data_retriever extends AbstractQpatient_data_retriever {
 //		System.out.println("STO CREANDO LA GUIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII");
 		IBasicEnvAwt env = outEnvView.getEnv();
 		if(env == null) {
-			env = new EnvFrame("H2-patient", Color.yellow, Color.black);
+			env = new EnvFrame("H2-patient", Color.green, Color.black);
 			env.init();
 			((EnvFrame)env).setSize(800,430);
 		}

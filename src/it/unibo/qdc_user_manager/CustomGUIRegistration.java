@@ -60,7 +60,7 @@ public class CustomGUIRegistration extends SituatedPlainObject {
 		@Override
 		public void execAction(String cmd) {
 			String input = env.readln();
-			println("CmdHandler -> " + cmd + " input= " + input);
+//			println("CmdHandler -> " + cmd + " input= " + input);
 			switch (cmd) {
 			case "DOCTOR REGISTRATION":	
 				try {

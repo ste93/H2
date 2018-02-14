@@ -1,4 +1,4 @@
-package it.unibo.qpatient_login;
+package it.unibo.qpatient_notification_receiver;
 
 import java.awt.Color;
 import java.awt.Label;
@@ -10,14 +10,14 @@ import it.unibo.is.interfaces.IBasicEnvAwt;
 import it.unibo.qactors.QActorContext;
 import it.unibo.qactors.QActorUtils;
 
-public class CustomGUIPatientLogin extends SituatedPlainObject {
+public class CustomGUIPatientNotifReceiver extends SituatedPlainObject {
 
 	private IActivityBase cmdHandler;
 	private IBasicEnvAwt envAwt;
 	private QActorContext ctx;
 	private String actorId;
 	
-	public CustomGUIPatientLogin(IBasicEnvAwt env, String actorId, QActorContext myCtx) {
+	public CustomGUIPatientNotifReceiver(IBasicEnvAwt env, String actorId, QActorContext myCtx) {
 		super(env);
 		envAwt = env;
 		init();
@@ -27,18 +27,18 @@ public class CustomGUIPatientLogin extends SituatedPlainObject {
 	
 	protected void init(){
 		cmdHandler = new CmdHandler(envAwt);
-		setCommandUI();
-		setInputUI();
+//		setCommandUI();
+//		setInputUI();
 //		addCustomPanel();	
 	}
 	
-	protected void setCommandUI(){
-		envAwt.addCmdPanel("commandPanel", new String[]{"LOGIN"}, cmdHandler);
-	}
+//	protected void setCommandUI(){
+//		envAwt.addCmdPanel("commandPanel", new String[]{"LOGIN"}, cmdHandler);
+//	}
 	
-	protected void setInputUI(){
-		envAwt.addInputPanel(50);
-	}
+//	protected void setInputUI(){
+//		envAwt.addInputPanel(50);
+//	}
 		
 //	protected void addCustomPanel(){
 //		Panel p = new Panel();
@@ -63,13 +63,13 @@ public class CustomGUIPatientLogin extends SituatedPlainObject {
 		public void execAction(String cmd) {
 			String input = env.readln();
 //			println("CmdHandler -> " + cmd + " input= " + input);
-			String acId = actorId.substring(0, actorId.length()-5);
-			try {
-				QActorUtils.raiseEvent(ctx, "input", "login_request", "login_request(" + input + "," + acId + ")");
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+//			String acId = actorId.substring(0, actorId.length()-5);
+//			try {
+//				QActorUtils.raiseEvent(ctx, "input", "login_request", "login_request(" + input + "," + acId + ")");
+//			} catch (Exception e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
 		}
 	}
 	

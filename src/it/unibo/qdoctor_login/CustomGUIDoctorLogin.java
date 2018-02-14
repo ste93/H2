@@ -62,7 +62,7 @@ public class CustomGUIDoctorLogin extends SituatedPlainObject {
 		@Override
 		public void execAction(String cmd) {
 			String input = env.readln();
-			println("CmdHandler -> " + cmd + " input= " + input);
+//			println("CmdHandler -> " + cmd + " input= " + input);
 			String acId = actorId.substring(0, actorId.length()-5);
 			try {
 				QActorUtils.raiseEvent(ctx, "input", "login_request", "login_request(" + input + "," + acId + ")");

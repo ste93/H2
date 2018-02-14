@@ -10,6 +10,8 @@ Event    doctor_data_request : doctor_data_request
 Event    doctor_notification_sender : doctor_notification_sender(NOTIFICATION)
 Event    register_request : register_request(NICKNAME,TYPE)
 Event    login_request : login_request(NICKNAME, NAME)
+Event    patient_login : patient_login
+Event    doctor_login : doctor_login
 
 
 //requirements: business 1,2,3,4 e functional 1,2,3,4,5
@@ -29,21 +31,30 @@ QActor qpatient_login context ctx_patient {
 	
 	Plan waitResponse [
 		println(" --- [PL] waiting response --- ")
-	] transition stopAfter 120000
+	] transition stopAfter 86400000
 	  whenMsg login_response -> loginResponse
 	  finally repeatPlan
 	  
 	Plan loginResponse [
 		println(" --- [PL] login response --- ");
-		onMsg login_response : login_response(DESCRIPTION) -> actorOp print(DESCRIPTION)
-	] 
+		removeRule login(_);
+		onMsg login_response : login_response(DESCRIPTION) -> addRule login(DESCRIPTION);
+		[!? login(DESCRIPTION)] actorOp print(DESCRIPTION);
+		[?? login("Login ok")] emit patient_login : patient_login
+	] switchTo waitResponse
 }
 
 QActor qpatient_sender context ctx_patient {
 	
 	Plan init normal [
 		println(" --- [PS] initializing --- ")	
-	] switchTo sendData
+	] switchTo waitLogin
+	
+	Plan waitLogin [
+		println(" --- [PS] waiting login --- ")
+	] transition stopAfter 86400000
+	  whenEvent patient_login -> sendData
+	  finally repeatPlan
 	
 	Plan sendData [
 		println(" --- [PS] sending data --- ");
@@ -57,10 +68,16 @@ QActor qpatient_sender context ctx_patient {
 	
 }
 
-QActor qpatient_data_retriever context ctx_patient -g gray {
+QActor qpatient_data_retriever context ctx_patient {
 	
-	Plan init normal [
-		println(" --- [PR] initializing --- ");
+	Plan waitLogin normal[
+		println(" --- [PR] waiting login --- ")
+	] transition stopAfter 86400000
+	  whenEvent patient_login -> init
+	  finally repeatPlan
+	  
+	Plan init [
+		println(" --- [PR] successful login --- ");
 		actorOp createGUI
 	] switchTo waitUserRequest
 	  
@@ -89,8 +106,15 @@ QActor qpatient_data_retriever context ctx_patient -g gray {
 
 QActor qpatient_notification_receiver context ctx_patient {
 	
-	Plan init normal [
-		println(" --- [PNR] initializing --- ")	
+	Plan waitLogin normal[
+		println(" --- [PNR] waiting login --- ")
+	] transition stopAfter 86400000
+	  whenEvent patient_login -> init
+	  finally repeatPlan
+	  
+	Plan init [
+		println(" --- [PNR] successful login --- ");
+		actorOp createGUI
 	] switchTo waitNotification
 	
 	Plan waitNotification [
@@ -101,12 +125,12 @@ QActor qpatient_notification_receiver context ctx_patient {
 	  
 	Plan visualizeNotification resumeLastPlan [
 		println(" --- [PNR] receive notification --- ");
-		onMsg notification : notification(DESCRIPTION) -> println(DESCRIPTION)
+		onMsg notification : notification(DESCRIPTION) -> actorOp print(DESCRIPTION)
 	]
 	
 }
 
-QActor qdc_data_receiver context ctx_data_centre {
+QActor qdc_data_receiver context ctx_data_centre  {
 	
 	Rules {
 		request_parameters(LIST) :- findall(patient_parameter(X,Y), patient_parameter(X, Y),LIST).
@@ -205,7 +229,7 @@ QActor qdc_user_manager context ctx_data_centre {
 		
 		correct_registration :- registration(NICKNAME,TYPE), assert(registered(NICKNAME,TYPE)), retract(registration(_,_)).
 		
-		can_login(NAME) :- login(NICKNAME,NAME), registered(NICKNAME,_).
+		can_login(NAME) :- login(NICKNAME,NAME), registered(NICKNAME,_), retract(login(_,_)).
 	}
 	
 	Plan init normal [
@@ -230,10 +254,10 @@ QActor qdc_user_manager context ctx_data_centre {
 	
 	Plan login resumeLastPlan [
 		println(" --- [UM] login --- ");
-		removeRule login(_);
 		onEvent login_request : login_request(NICKNAME, NAME) -> addRule login(NICKNAME, NAME);
-		[!? can_login(NAME)] actorOp print(NAME);
-		[!? can_login(NAME)] forward NAME -m login_response : login_response("Login complete") else forward NAME -m login_response : login_response("The user name is not present!")
+		[!? can_login(NAME)] forward NAME -m login_response : login_response("Login ok");
+		[?? login(_, NAME)] forward NAME -m login_response : login_response("Login failed")
+		
 	]
 	
 }
@@ -253,14 +277,23 @@ QActor qdoctor_login context ctx_doctor {
 	  
 	Plan loginResponse [
 		println(" --- [DL] login response --- ");
-		onMsg login_response : login_response(DESCRIPTION) -> actorOp print(DESCRIPTION)
-	] 
+		removeRule login(_);
+		onMsg login_response : login_response(DESCRIPTION) -> addRule login(DESCRIPTION);
+		[!? login(DESCRIPTION)] actorOp print(DESCRIPTION);
+		[?? login("Login ok")] emit doctor_login : doctor_login
+	] switchTo waitResponse
 }
 
 QActor qdoctor_data_retriever context ctx_doctor {
-		
-	Plan init normal [
-		println(" --- [D] initializing --- ")	;
+	
+	Plan waitLogin normal[
+		println(" --- [D] waiting login --- ")
+	] transition stopAfter 86400000
+	  whenEvent doctor_login -> init
+	  finally repeatPlan
+	  
+	Plan init [
+		println(" --- [D] successful login --- ");
 		actorOp createGUI
 	] switchTo waitUserRequest
 	  
@@ -290,8 +323,15 @@ QActor qdoctor_data_retriever context ctx_doctor {
 
 QActor qdoctor_notification_receiver context ctx_doctor {
 	
-	Plan init normal [
-		println(" --- [DNR] initializing --- ")	
+	Plan waitLogin normal[
+		println(" --- [DNR] waiting login --- ")
+	] transition stopAfter 86400000
+	  whenEvent doctor_login -> init
+	  finally repeatPlan
+	  
+	Plan init [
+		println(" --- [DNR] successful login --- ");
+		actorOp createGUI
 	] switchTo waitNotification
 	
 	Plan waitNotification [
@@ -302,14 +342,20 @@ QActor qdoctor_notification_receiver context ctx_doctor {
 	  
 	Plan receiveNotification resumeLastPlan [
 		println(" --- [DNR] receive notification --- ");
-		onMsg notification : notification(DESCRIPTION) -> println(DESCRIPTION)
+		onMsg notification : notification(DESCRIPTION) -> actorOp print(DESCRIPTION)
 	]
 	
 }
 
 QActor qdoctor_notification_sender context ctx_doctor {
 	
-	Plan init normal [
+	Plan waitLogin normal[
+		println(" --- [DNS] waiting login --- ")
+	] transition stopAfter 86400000
+	  whenEvent doctor_login -> init
+	  finally repeatPlan
+	
+	Plan init  [
 		println(" --- [DNS] initializing --- ");
 		actorOp createGUI	
 	] switchTo waitInput

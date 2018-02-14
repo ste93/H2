@@ -60,7 +60,7 @@ public class CustomGUISupportAdvice extends SituatedPlainObject {
 		@Override
 		public void execAction(String cmd) {
 			String input = env.readln();
-			println("CmdHandler -> " + cmd + " input= " + input);
+//			println("CmdHandler -> " + cmd + " input= " + input);
 			try {
 				QActorUtils.raiseEvent(ctx, "input", "doctor_notification_sender", "doctor_notification_sender(" + input + ")");
 			} catch (Exception e) {

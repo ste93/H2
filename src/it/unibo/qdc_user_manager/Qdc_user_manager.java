@@ -33,7 +33,7 @@ public class Qdc_user_manager extends AbstractQdc_user_manager {
 	public void createGUI() {
 		IBasicEnvAwt env = outEnvView.getEnv();
 		if(env == null) {
-			env = new EnvFrame("H2-Registration", Color.magenta, Color.black);
+			env = new EnvFrame("H2-Registration", Color.yellow, Color.black);
 			env.init();
 			((EnvFrame)env).setSize(800,430);
 		}

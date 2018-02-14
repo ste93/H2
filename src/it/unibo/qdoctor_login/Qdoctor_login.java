@@ -33,7 +33,7 @@ public class Qdoctor_login extends AbstractQdoctor_login {
 	public void createGUI() {
 		IBasicEnvAwt env = outEnvView.getEnv();
 		if(env == null) {
-			env = new EnvFrame("H2-Doctor Login", Color.orange, Color.black);
+			env = new EnvFrame("H2-Doctor Login", Color.white, Color.black);
 			env.init();
 			((EnvFrame)env).setSize(800,430);
 		}
