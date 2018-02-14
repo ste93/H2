@@ -1,7 +1,7 @@
 System h2
 
-Dispatch sending_patient_parameter : sending_patient_parameter(PARAMETER, TIMESTAMP)
-Dispatch patient_parameters_request : patient_parameters_request
+Dispatch sending_patient_parameter : sending_patient_parameter(ID,PARAMETER,TIMESTAMP)
+Dispatch patient_parameters_request : patient_parameters_request(ID)
 Dispatch patient_parameters_response : patient_parameters_response(LIST)
 Dispatch notification : notification(DESCRIPTION)
 Dispatch login_response : login_response(DESCRIPTION)
@@ -74,11 +74,14 @@ QActor qpatient_sender context ctx_patient {
 	
 	Plan sendData [
 		println(" --- [PS] sending data --- ");
-		forward qdc_data_receiver -m sending_patient_parameter : sending_patient_parameter(37, "12/12/12");
+		[!? actorobj(ID)] actorOp getId(ID);
+		[?? actorOpDone(OP,R)] forward qdc_data_receiver -m sending_patient_parameter : sending_patient_parameter(R,37,"12/12/12");
 		delay 2500;
-		forward qdc_data_receiver -m sending_patient_parameter : sending_patient_parameter(38, "12/12/12");
+		[!? actorobj(ID)] actorOp getId(ID);
+		[?? actorOpDone(OP,R)] forward qdc_data_receiver -m sending_patient_parameter : sending_patient_parameter(R,38,"12/12/12");
 		delay 2500;
-		forward qdc_data_receiver -m sending_patient_parameter : sending_patient_parameter(36, "12/12/12");
+		[!? actorobj(ID)] actorOp getId(ID);
+		[?? actorOpDone(OP,R)] forward qdc_data_receiver -m sending_patient_parameter : sending_patient_parameter(R,39,"12/12/12");
 		delay 2500
 	] finally repeatPlan
 	
@@ -93,29 +96,29 @@ QActor qpatient_data_retriever context ctx_patient {
 	  finally repeatPlan
 	*/  
 	Plan init normal [
-		println(" --- [PR] initializing --- ");
+		actorOp print(" --- [PR] initializing --- ");
 		actorOp createGUI
 	] switchTo waitUserRequest
 	  
 	Plan waitUserRequest [
-		println(" --- [PR] waiting for user request --- ")
+		actorOp print(" --- [PR] waiting for user request --- ")
 	] transition stopAfter 86400000
 	  whenEvent patient_data_request -> requestData
 	  finally repeatPlan
 	
 	Plan requestData [
-		println(" --- [PR] requesting data --- ");
-		//delay 3000;
-		forward qdc_data_receiver -m patient_parameters_request : patient_parameters_request
+		actorOp print(" --- [PR] requesting data --- ");
+		[!? actorobj(ID)] actorOp getId(ID);
+		[?? actorOpDone(OP,R)] forward qdc_data_receiver -m patient_parameters_request : patient_parameters_request(R)
 	] switchTo waitResponse
 	
 	Plan waitResponse resumeLastPlan [
-		println(" --- [PR] waiting for a response --- ")
+		actorOp print(" --- [PR] waiting for a response --- ")
 	] transition stopAfter 600000
 	  whenMsg patient_parameters_response -> visualiseData
 	  
 	Plan visualiseData [
-		println(" --- [PR] visualizing data --- ");
+		actorOp print(" --- [PR] visualizing data --- ");
 		onMsg patient_parameters_response : patient_parameters_response(LIST) -> actorOp print(LIST)
 	] switchTo waitUserRequest
 }
@@ -149,7 +152,11 @@ QActor qpatient_notification_receiver context ctx_patient {
 QActor qdc_data_receiver context ctx_data_centre  {
 	
 	Rules {
-		request_parameters(LIST) :- findall(patient_parameter(X,Y), patient_parameter(X, Y),LIST).
+		request_parameters(NAME,LIST) :- patient_id(ID),
+									   text_term(I,ID),
+									   text_concat('qpatient_data_retriever',I,NAME),
+									   findall(patient_parameter(ID,X,Y), patient_parameter(ID,X,Y),LIST),
+									   retract(patient_id(ID)),!.
 	}
 	
 	Plan init normal [
@@ -165,7 +172,7 @@ QActor qdc_data_receiver context ctx_data_centre  {
 	  
 	Plan saveParameter [
 		println(" --- [DC] saving parameters --- ");
-		onMsg sending_patient_parameter : sending_patient_parameter(PARAMETER, TIMESTAMP) -> demo asserta(patient_parameter(PARAMETER, TIMESTAMP))
+		onMsg sending_patient_parameter : sending_patient_parameter(ID,PARAMETER,TIMESTAMP) -> demo asserta(patient_parameter(ID,PARAMETER,TIMESTAMP))
 	] switchTo sendToAnalyser
 	
 	Plan sendToAnalyser [
@@ -175,8 +182,11 @@ QActor qdc_data_receiver context ctx_data_centre  {
 	
 	Plan handleRequest resumeLastPlan [
 		println(" --- [DC] handling parameters request --- ");
-		onMsg patient_parameters_request : patient_parameters_request -> actorOp memoCurrentCaller;
-		[!? request_parameters(LIST)] replyToCaller -m patient_parameters_response : patient_parameters_response(LIST)		
+		printCurrentMessage;
+		onMsg patient_parameters_request : patient_parameters_request(ID) -> demo asserta(patient_id(ID));
+		//actorOp memoCurrentCaller;
+		//[!? patient_id(ID)] println(ID); 
+		[!? request_parameters(NAME,LIST)] sendto NAME in ctx_patient_login -m patient_parameters_response : patient_parameters_response(LIST)		
 	]
 	
 }
@@ -338,7 +348,7 @@ QActor qdoctor_data_retriever context ctx_doctor {
 	Plan requestData [
 		//delay 3000;
 		println(" --- [D] requesting data --- ");
-		forward qdc_data_receiver -m patient_parameters_request : patient_parameters_request
+		[!? actorobj(ID)] forward qdc_data_receiver -m patient_parameters_request : patient_parameters_request(ID)
 	] switchTo waitResponse
 	
 	Plan waitResponse resumeLastPlan [

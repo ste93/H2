@@ -18,12 +18,19 @@ public class Qpatient_data_retriever extends AbstractQpatient_data_retriever {
 	
 	public Qpatient_data_retriever(String actorId, QActorContext myCtx, IOutputEnvView outEnvView)  throws Exception{
 		super(actorId, myCtx, outEnvView);
-		System.out.println("PAZIENTE NOME DELL'ATTORE: " + actorId);
-		System.out.println("PAZIENTE CONTESTO DELL'ATTORE: " + myCtx.getName());		
+//		System.out.println("PAZIENTE NOME DELL'ATTORE: " + actorId);
+//		System.out.println("PAZIENTE CONTESTO DELL'ATTORE: " + myCtx.getName());		
 	}
 /*
  * ADDED BY THE APPLICATION DESIGNER	
  */
+
+	public String getId(final String oldID) {
+		String newID = oldID.substring(0, oldID.length()-5);
+		String ID = newID.replaceAll("\\D+", ""); 
+//		System.out.println("IL NUMERO DEL MIO QACTOR è: " + ID);
+		return ID;
+	}
 	
 	protected void addInputPanel(int size) {}
 	

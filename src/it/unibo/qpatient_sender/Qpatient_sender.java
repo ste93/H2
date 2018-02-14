@@ -13,6 +13,14 @@ public class Qpatient_sender extends AbstractQpatient_sender {
 		System.out.println("PAZIENTE NOME DELL'ATTORE: " + actorId);
 		System.out.println("PAZIENTE CONTESTO DELL'ATTORE: " + myCtx.getName());
 	}
+	
+	public String getId(final String oldID) {
+		String newID = oldID.substring(0, oldID.length()-5);
+		String ID = newID.replaceAll("\\D+", ""); 
+//		System.out.println("IL NUMERO DEL MIO QACTOR è: " + ID);
+		return ID;
+	}
+	
 /*
  * ADDED BY THE APPLICATION DESIGNER	
  */
