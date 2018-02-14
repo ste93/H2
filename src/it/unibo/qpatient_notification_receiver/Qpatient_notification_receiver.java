@@ -17,6 +17,8 @@ public class Qpatient_notification_receiver extends AbstractQpatient_notificatio
 
 	public Qpatient_notification_receiver(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
 		super(actorId, myCtx, outEnvView);
+		System.out.println("PAZIENTE NOME DELL'ATTORE: " + actorId);
+		System.out.println("PAZIENTE CONTESTO DELL'ATTORE: " + myCtx.getName());
 	}
 /*
  * ADDED BY THE APPLICATION DESIGNER	

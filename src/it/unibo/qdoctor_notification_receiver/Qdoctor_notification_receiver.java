@@ -17,6 +17,8 @@ public class Qdoctor_notification_receiver extends AbstractQdoctor_notification_
 
 	public Qdoctor_notification_receiver(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
 		super(actorId, myCtx, outEnvView);
+		System.out.println("NOME DELL'ATTORE: " + actorId);
+		System.out.println("CONTESTO DELL'ATTORE: " + myCtx.getName());
 	}
 /*
  * ADDED BY THE APPLICATION DESIGNER	

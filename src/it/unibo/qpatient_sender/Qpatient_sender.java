@@ -7,8 +7,11 @@ import it.unibo.is.interfaces.IOutputEnvView;
 import it.unibo.qactors.QActorContext;
 
 public class Qpatient_sender extends AbstractQpatient_sender { 
+	
 	public Qpatient_sender(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
 		super(actorId, myCtx, outEnvView);
+		System.out.println("PAZIENTE NOME DELL'ATTORE: " + actorId);
+		System.out.println("PAZIENTE CONTESTO DELL'ATTORE: " + myCtx.getName());
 	}
 /*
  * ADDED BY THE APPLICATION DESIGNER	

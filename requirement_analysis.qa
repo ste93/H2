@@ -16,13 +16,25 @@ Event    doctor_login : doctor_login
 
 //requirements: business 1,2,3,4 e functional 1,2,3,4,5
 Context ctx_data_centre 	ip[host="localhost" port=8070] //-g cyan
+Context ctx_patient_login 	ip[host="localhost" port=1278] //-g green
 Context ctx_patient 		ip[host="localhost" port=1234] //-g green
+Context ctx_doctor_login  	ip[host="localhost" port=3478] //-g white
 Context ctx_doctor  		ip[host="localhost" port=3456] //-g white
 Context ctx_create_actors  	ip[host="localhost" port=4678] //-g white
 
 EventHandler evh for patient_data_request, doctor_data_request, doctor_notification_sender, register_request, login_request -print;
 
-QActor qpatient_login context ctx_patient {
+QActor qpatient_login context ctx_patient_login {
+	
+	Rules {
+		myNewName(Prot,Name,N1) :-
+			value(nameCounter,N1),
+			text_term(N1S,N1), 
+			text_term(ProtS,Prot),
+ 			text_concat(ProtS,N1S,Name),
+			replaceRule(instance(_,_,_),
+			instance(Prot,N1,Name)).
+	}
 	
 	Plan init normal [
 		println(" --- [PL] initializing --- ");
@@ -40,21 +52,25 @@ QActor qpatient_login context ctx_patient {
 		removeRule login(_);
 		onMsg login_response : login_response(DESCRIPTION) -> addRule login(DESCRIPTION);
 		[!? login(DESCRIPTION)] actorOp print(DESCRIPTION);
-		[?? login("Login ok")] emit patient_login : patient_login
+		[?? login("Login ok")] switchTo createActors
+	] switchTo waitResponse
+	
+	Plan createActors [
+		[!? newName(qpatient_sender, Name, N)] demo createActor(Name, 'it.unibo.qpatient_sender.Qpatient_sender');
+		[!? myNewName(qpatient_data_retriever, Name, N)] demo createActor(Name, 'it.unibo.qpatient_data_retriever.Qpatient_data_retriever');
+		[!? myNewName(qpatient_notification_receiver, Name, N)] demo createActor(Name, 'it.unibo.qpatient_notification_receiver.Qpatient_notification_receiver')
 	] switchTo waitResponse
 }
 
 QActor qpatient_sender context ctx_patient {
-	
+	/*
 	Plan init normal [
 		println(" --- [PS] initializing --- ")	
 	] switchTo waitLogin
-	
-	Plan waitLogin [
-		println(" --- [PS] waiting login --- ")
-	] transition stopAfter 86400000
-	  whenEvent patient_login -> sendData
-	  finally repeatPlan
+	*/
+	Plan init normal[
+		println(" --- [PS] initializing --- ")
+	] switchTo sendData
 	
 	Plan sendData [
 		println(" --- [PS] sending data --- ");
@@ -69,15 +85,15 @@ QActor qpatient_sender context ctx_patient {
 }
 
 QActor qpatient_data_retriever context ctx_patient {
-	
+	/*
 	Plan waitLogin normal[
 		println(" --- [PR] waiting login --- ")
 	] transition stopAfter 86400000
 	  whenEvent patient_login -> init
 	  finally repeatPlan
-	  
-	Plan init [
-		println(" --- [PR] successful login --- ");
+	*/  
+	Plan init normal [
+		println(" --- [PR] initializing --- ");
 		actorOp createGUI
 	] switchTo waitUserRequest
 	  
@@ -105,15 +121,15 @@ QActor qpatient_data_retriever context ctx_patient {
 }
 
 QActor qpatient_notification_receiver context ctx_patient {
-	
+	/*
 	Plan waitLogin normal[
 		println(" --- [PNR] waiting login --- ")
 	] transition stopAfter 86400000
 	  whenEvent patient_login -> init
 	  finally repeatPlan
-	  
-	Plan init [
-		println(" --- [PNR] successful login --- ");
+	*/  
+	Plan init normal [
+		println(" --- [PNR] initializing --- ");
 		actorOp createGUI
 	] switchTo waitNotification
 	
@@ -262,7 +278,17 @@ QActor qdc_user_manager context ctx_data_centre {
 	
 }
 
-QActor qdoctor_login context ctx_doctor {
+QActor qdoctor_login context ctx_doctor_login {
+	
+	Rules {
+		myNewName(Prot,Name,N1) :-
+			value(nameCounter,N1),
+			text_term(N1S,N1), 
+			text_term(ProtS,Prot),
+ 			text_concat(ProtS,N1S,Name),
+			replaceRule(instance(_,_,_),
+			instance(Prot,N1,Name)).
+	}
 	
 	Plan init normal [
 		println(" --- [DL] initializing --- ");
@@ -280,20 +306,26 @@ QActor qdoctor_login context ctx_doctor {
 		removeRule login(_);
 		onMsg login_response : login_response(DESCRIPTION) -> addRule login(DESCRIPTION);
 		[!? login(DESCRIPTION)] actorOp print(DESCRIPTION);
-		[?? login("Login ok")] emit doctor_login : doctor_login
+		[?? login("Login ok")] switchTo createActors
+	] switchTo waitResponse
+	
+	Plan createActors [
+		[!? newName(qdoctor_data_retriever, Name, N)] demo createActor(Name, 'it.unibo.qdoctor_data_retriever.Qdoctor_data_retriever');
+		[!? myNewName(qdoctor_notification_receiver, Name, N)] demo createActor(Name, 'it.unibo.qdoctor_notification_receiver.Qdoctor_notification_receiver');
+		[!? myNewName(qdoctor_notification_sender, Name, N)] demo createActor(Name, 'it.unibo.qdoctor_notification_sender.Qdoctor_notification_sender')
 	] switchTo waitResponse
 }
 
 QActor qdoctor_data_retriever context ctx_doctor {
-	
+	/*
 	Plan waitLogin normal[
 		println(" --- [D] waiting login --- ")
 	] transition stopAfter 86400000
 	  whenEvent doctor_login -> init
 	  finally repeatPlan
-	  
-	Plan init [
-		println(" --- [D] successful login --- ");
+	*/  
+	Plan init normal [
+		println(" --- [D] initializing --- ");
 		actorOp createGUI
 	] switchTo waitUserRequest
 	  
@@ -322,15 +354,15 @@ QActor qdoctor_data_retriever context ctx_doctor {
 }
 
 QActor qdoctor_notification_receiver context ctx_doctor {
-	
+	/*
 	Plan waitLogin normal[
 		println(" --- [DNR] waiting login --- ")
 	] transition stopAfter 86400000
 	  whenEvent doctor_login -> init
 	  finally repeatPlan
-	  
-	Plan init [
-		println(" --- [DNR] successful login --- ");
+	*/  
+	Plan init normal [
+		println(" --- [DNR] initializing --- ");
 		actorOp createGUI
 	] switchTo waitNotification
 	
@@ -348,14 +380,14 @@ QActor qdoctor_notification_receiver context ctx_doctor {
 }
 
 QActor qdoctor_notification_sender context ctx_doctor {
-	
+	/*
 	Plan waitLogin normal[
 		println(" --- [DNS] waiting login --- ")
 	] transition stopAfter 86400000
 	  whenEvent doctor_login -> init
 	  finally repeatPlan
-	
-	Plan init  [
+	*/
+	Plan init  normal [
 		println(" --- [DNS] initializing --- ");
 		actorOp createGUI	
 	] switchTo waitInput

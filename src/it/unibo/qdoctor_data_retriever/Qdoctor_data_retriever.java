@@ -17,6 +17,8 @@ public class Qdoctor_data_retriever extends AbstractQdoctor_data_retriever {
 	
 	public Qdoctor_data_retriever(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
 		super(actorId, myCtx, outEnvView);
+		System.out.println("NOME DELL'ATTORE: " + actorId);
+		System.out.println("CONTESTO DELL'ATTORE: " + myCtx.getName());
 	}
 /*
  * ADDED BY THE APPLICATION DESIGNER	
