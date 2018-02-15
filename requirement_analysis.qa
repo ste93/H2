@@ -2,13 +2,14 @@ System h2
 
 Dispatch sending_patient_parameter : sending_patient_parameter(ID,PARAMETER,TIMESTAMP)
 Dispatch patient_parameters_request : patient_parameters_request(ID)
+Dispatch patient_parameters_request_from_doctor : patient_parameters_request_from_doctor(DOCID,PATID)
 Dispatch patient_parameters_response : patient_parameters_response(LIST)
 Dispatch notification : notification(DESCRIPTION)
 Dispatch login_response : login_response(DESCRIPTION)
 Dispatch success : success
 Dispatch failure : failure
 Event    patient_data_request : patient_data_request(ID)
-Event    doctor_data_request : doctor_data_request
+Event    doctor_data_request : doctor_data_request(ID)
 Event    doctor_notification_sender : doctor_notification_sender(NOTIFICATION)
 Event    register_request : register_request(NICKNAME,TYPE)
 Event    login_request : login_request(NICKNAME,TYPE,NAME)
@@ -95,7 +96,7 @@ QActor qpatient_data_retriever context ctx_patient {
 		check_myid(ID) :- myID(ID), received(I), check(ID,I).
 		check(I,I).
 		
-		check_and_get_name(NAME) :- check_myid(ID),
+		check_and_get_name(NAME) :- check_myid(_),
 							        get_name(NAME).
 							        
 		get_name(NAME) :- myID(ID),
@@ -116,8 +117,8 @@ QActor qpatient_data_retriever context ctx_patient {
 		actorOp print(" --- [PR] initializing --- ");
 		actorOp createGUI;
 		[!? actorobj(ID)] actorOp getId(ID);
-		[?? actorOpDone(OP,R)] addRule myID(R);
-		[!? myID(ID)] actorOp print(primo(ID))
+		[?? actorOpDone(OP,R)] addRule myID(R)
+		//[!? myID(ID)] actorOp print(primo(ID))
 	] switchTo waitUserRequest
 	  
 	Plan waitUserRequest [
@@ -129,9 +130,9 @@ QActor qpatient_data_retriever context ctx_patient {
 	Plan requestData [
 		actorOp print(" --- [PR] requesting data --- ");
 		onEvent patient_data_request : patient_data_request(I) -> addRule received(I);
-		[!? received(ID)] actorOp print(secondo(ID));
-		printCurrentEvent;
-		[!? check_myid(ID)] actorOp print(ciao(ID));
+		//[!? received(ID)] actorOp print(secondo(ID));
+		//printCurrentEvent;
+		//[!? check_myid(ID)] actorOp print(ciao(ID));
 		[!? check_myid(ID)] forward qdc_data_receiver -m patient_parameters_request : patient_parameters_request(ID); 
 		[!? check_and_get_name(NAME)] forward NAME -m success : success; 
 		[!? check_not_equal(NAME)] forward NAME -m failure : failure;
@@ -181,11 +182,17 @@ QActor qpatient_notification_receiver context ctx_patient {
 QActor qdc_data_receiver context ctx_data_centre  {
 	
 	Rules {
-		request_parameters(NAME,LIST) :- patient_id(ID),
-									   text_term(I,ID),
-									   text_concat('qpatient_data_retriever',I,NAME),
-									   findall(patient_parameter(ID,X,Y), patient_parameter(ID,X,Y),LIST),
-									   retract(patient_id(ID)),!.
+		request_parameters(A,NAME,LIST) :- patient_id(ID),
+									       text_term(I,ID),
+									       text_concat(A,I,NAME),
+									       findall(patient_parameter(ID,X,Y), patient_parameter(ID,X,Y),LIST),
+									       retract(patient_id(ID)),!.
+									   
+		request_parameters_from_doc(A,NAME,LIST) :- doc_and_pat_id(DOCID,PATID),
+									                text_term(I,DOCID),
+									                text_concat(A,I,NAME),
+									                findall(patient_parameter(PATID,X,Y), patient_parameter(PATID,X,Y),LIST),
+									                retract(doc_and_pat_id(DOCID,PATID)),!.							  
 	}
 	
 	Plan init normal [
@@ -196,7 +203,8 @@ QActor qdc_data_receiver context ctx_data_centre  {
 		println(" --- [DC] waiting messages --- ")
 	] transition stopAfter 86400000
 	  whenMsg sending_patient_parameter -> saveParameter,
-	  whenMsg patient_parameters_request -> handleRequest
+	  whenMsg patient_parameters_request -> handleRequest,
+	  whenMsg patient_parameters_request_from_doctor -> handleDoctorRequest
 	  finally repeatPlan
 	  
 	Plan saveParameter [
@@ -211,11 +219,19 @@ QActor qdc_data_receiver context ctx_data_centre  {
 	
 	Plan handleRequest resumeLastPlan [
 		println(" --- [DC] handling parameters request --- ");
-		printCurrentMessage;
+		//printCurrentMessage;
 		onMsg patient_parameters_request : patient_parameters_request(ID) -> demo asserta(patient_id(ID));
 		//actorOp memoCurrentCaller;
 		//[!? patient_id(ID)] println(ID); 
-		[!? request_parameters(NAME,LIST)] sendto NAME in ctx_patient_login -m patient_parameters_response : patient_parameters_response(LIST)		
+		[!? request_parameters('qpatient_data_retriever',NAME,LIST)] sendto NAME in ctx_patient_login -m patient_parameters_response : patient_parameters_response(LIST)		
+	]
+	
+	Plan handleDoctorRequest resumeLastPlan [
+		println(" --- [DC] handling parameters request from doctor --- ");
+		onMsg patient_parameters_request_from_doctor : patient_parameters_request_from_doctor(DOCID,PATID) -> demo asserta(doc_and_pat_id(DOCID,PATID));
+		//actorOp memoCurrentCaller;
+		//[!? patient_id(ID)] println(ID); 
+		[!? request_parameters_from_doc('qdoctor_data_retriever',NAME,LIST)] sendto NAME in ctx_doctor_login -m patient_parameters_response : patient_parameters_response(LIST)		
 	]
 	
 }
@@ -356,6 +372,23 @@ QActor qdoctor_login context ctx_doctor_login {
 }
 
 QActor qdoctor_data_retriever context ctx_doctor {
+	
+	Rules{
+		my_patient(2).
+		
+		check_myid(DOCID,PATID) :- myID(DOCID), received(I), check(DOCID,I), my_patient(PATID).
+		check(I,I).
+		
+		check_and_get_name(NAME) :- check_myid(_,_),
+							        get_name(NAME).
+							        
+		get_name(NAME) :- myID(ID),
+						  text_term(I,ID),
+						  text_concat('qdoctor_data_retriever',I,NAME), !.		        
+							       
+		check_not_equal(NAME) :-  myID(ID), received(I),eval(lt,I,ID),get_name(NAME).
+		check_not_equal(NAME) :-  myID(ID), received(I),eval(gt,I,ID),get_name(NAME).
+	}
 	/*
 	Plan waitLogin normal[
 		println(" --- [D] waiting login --- ")
@@ -365,28 +398,41 @@ QActor qdoctor_data_retriever context ctx_doctor {
 	*/  
 	Plan init normal [
 		println(" --- [D] initializing --- ");
-		actorOp createGUI
+		actorOp createGUI;
+		[!? actorobj(ID)] actorOp getId(ID);
+		[?? actorOpDone(OP,R)] addRule myID(R);
+		[!? myID(R)] actorOp print(id(R))
 	] switchTo waitUserRequest
 	  
 	Plan waitUserRequest [
-		println(" --- [D] waiting for user request --- ")
+		actorOp print(" --- [D] waiting for user request --- ")
 	] transition stopAfter 86400000
 	  whenEvent doctor_data_request -> requestData
 	  finally repeatPlan
 	
 	Plan requestData [
 		//delay 3000;
-		println(" --- [D] requesting data --- ");
-		[!? actorobj(ID)] forward qdc_data_receiver -m patient_parameters_request : patient_parameters_request(ID)
-	] switchTo waitResponse
+		actorOp print(" --- [D] requesting data --- ");
+		onEvent doctor_data_request : doctor_data_request(I) -> addRule received(I);
+		[!? received(ID)] actorOp print(idricevuto(ID));
+		printCurrentEvent;
+		[!? check_myid(DOCID,PATID)] actorOp print(ritornomioidepationtid(DOCID,PATID));
+		[!? check_myid(DOCID,PATID)] forward qdc_data_receiver -m patient_parameters_request_from_doctor : patient_parameters_request_from_doctor(DOCID,PATID); 
+		[!? check_and_get_name(NAME)] forward NAME -m success : success; 
+		[!? check_not_equal(NAME)] forward NAME -m failure : failure;
+		removeRule received(I)
+	] transition stopAfter 30000
+	  whenMsg success -> waitResponse,
+	  whenMsg failure -> waitUserRequest
+	  finally repeatPlan
 	
 	Plan waitResponse resumeLastPlan [
-		println(" --- [D] waiting for a response --- ")
+		actorOp print(" --- [D] waiting for a response --- ")
 	] transition stopAfter 60000
 	  whenMsg patient_parameters_response -> visualiseData
 	  
 	Plan visualiseData [
-		println(" --- [D] visualizing data --- ");
+		actorOp print(" --- [D] visualizing data --- ");
 		onMsg patient_parameters_response : patient_parameters_response(LIST) -> actorOp print(LIST)
 	] switchTo waitUserRequest
 	

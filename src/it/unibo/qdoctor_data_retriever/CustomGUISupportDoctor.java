@@ -15,12 +15,14 @@ public class CustomGUISupportDoctor extends SituatedPlainObject {
 	private IActivityBase cmdHandler;
 	private IBasicEnvAwt envAwt;
 	private QActorContext ctx;
+	private String id;
 	
-	public CustomGUISupportDoctor(IBasicEnvAwt env, QActorContext myCtx) {
+	public CustomGUISupportDoctor(IBasicEnvAwt env, QActorContext myCtx, String id) {
 		super(env);
 		envAwt = env;
 		init();
 		this.ctx = myCtx;
+		this.id = id;
 	}
 	
 	protected void init(){
@@ -62,7 +64,7 @@ public class CustomGUISupportDoctor extends SituatedPlainObject {
 			String input = env.readln();
 //			println("CmdHandler -> " + cmd + " input= " + input);
 			try {
-				QActorUtils.raiseEvent(ctx, "input", "doctor_data_request", "doctor_data_request");
+				QActorUtils.raiseEvent(ctx, "input", "doctor_data_request", "doctor_data_request("+id+")");
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();

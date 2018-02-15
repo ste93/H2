@@ -24,6 +24,13 @@ public class Qdoctor_data_retriever extends AbstractQdoctor_data_retriever {
  * ADDED BY THE APPLICATION DESIGNER	
  */
 	
+	public String getId(final String oldID) {
+		String newID = oldID.substring(0, oldID.length()-5);
+		String ID = newID.replaceAll("\\D+", ""); 
+//		System.out.println("IL NUMERO DEL MIO QACTOR è: " + ID);
+		return ID;
+	}
+	
 	protected void addInputPanel(int size) {}
 	
 	protected void addCmdPanel() {}
@@ -41,7 +48,7 @@ public class Qdoctor_data_retriever extends AbstractQdoctor_data_retriever {
 			((EnvFrame)env).setSize(800,430);
 		}
 		env.writeOnStatusBar("H2-doctor" + " | working ... ",14);
-		gui = new CustomGUISupportDoctor(env,myCtx);
+		gui = new CustomGUISupportDoctor(env,myCtx,getId(actorId));
 	}
 	
 }
