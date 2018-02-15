@@ -49,7 +49,7 @@ public class Qpatient_data_retriever extends AbstractQpatient_data_retriever {
 			((EnvFrame)env).setSize(800,430);
 		}
 		env.writeOnStatusBar("H2-patient" + " | working ... ",14);
-		gui = new CustomGUISupportPatient(env,myCtx);
+		gui = new CustomGUISupportPatient(env,myCtx,getId(actorId));
 	}
 	
 }

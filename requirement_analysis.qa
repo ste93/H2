@@ -5,7 +5,9 @@ Dispatch patient_parameters_request : patient_parameters_request(ID)
 Dispatch patient_parameters_response : patient_parameters_response(LIST)
 Dispatch notification : notification(DESCRIPTION)
 Dispatch login_response : login_response(DESCRIPTION)
-Event    patient_data_request : patient_data_request
+Dispatch success : success
+Dispatch failure : failure
+Event    patient_data_request : patient_data_request(ID)
 Event    doctor_data_request : doctor_data_request
 Event    doctor_notification_sender : doctor_notification_sender(NOTIFICATION)
 Event    register_request : register_request(NICKNAME,TYPE)
@@ -14,7 +16,7 @@ Event    patient_login : patient_login
 Event    doctor_login : doctor_login
 
 
-//requirements: business 1,2,3,4 e functional 1,2,3,4,5
+//requirements: business 1,2,3,4,5,6,7 e functional 1,2,3,4,5,6,7
 Context ctx_data_centre 	ip[host="localhost" port=8070] //-g cyan
 Context ctx_patient_login 	ip[host="localhost" port=1278] //-g green
 Context ctx_patient 		ip[host="localhost" port=1234] //-g green
@@ -88,6 +90,21 @@ QActor qpatient_sender context ctx_patient {
 }
 
 QActor qpatient_data_retriever context ctx_patient {
+	
+	Rules{
+		check_myid(ID) :- myID(ID), received(I), check(ID,I).
+		check(I,I).
+		
+		check_and_get_name(NAME) :- check_myid(ID),
+							        get_name(NAME).
+							        
+		get_name(NAME) :- myID(ID),
+						  text_term(I,ID),
+						  text_concat('qpatient_data_retriever',I,NAME), !.		        
+							       
+		check_not_equal(NAME) :-  myID(ID), received(I),eval(lt,I,ID),get_name(NAME).
+		check_not_equal(NAME) :-  myID(ID), received(I),eval(gt,I,ID),get_name(NAME).
+	}
 	/*
 	Plan waitLogin normal[
 		println(" --- [PR] waiting login --- ")
@@ -97,7 +114,10 @@ QActor qpatient_data_retriever context ctx_patient {
 	*/  
 	Plan init normal [
 		actorOp print(" --- [PR] initializing --- ");
-		actorOp createGUI
+		actorOp createGUI;
+		[!? actorobj(ID)] actorOp getId(ID);
+		[?? actorOpDone(OP,R)] addRule myID(R);
+		[!? myID(ID)] actorOp print(primo(ID))
 	] switchTo waitUserRequest
 	  
 	Plan waitUserRequest [
@@ -108,9 +128,18 @@ QActor qpatient_data_retriever context ctx_patient {
 	
 	Plan requestData [
 		actorOp print(" --- [PR] requesting data --- ");
-		[!? actorobj(ID)] actorOp getId(ID);
-		[?? actorOpDone(OP,R)] forward qdc_data_receiver -m patient_parameters_request : patient_parameters_request(R)
-	] switchTo waitResponse
+		onEvent patient_data_request : patient_data_request(I) -> addRule received(I);
+		[!? received(ID)] actorOp print(secondo(ID));
+		printCurrentEvent;
+		[!? check_myid(ID)] actorOp print(ciao(ID));
+		[!? check_myid(ID)] forward qdc_data_receiver -m patient_parameters_request : patient_parameters_request(ID); 
+		[!? check_and_get_name(NAME)] forward NAME -m success : success; 
+		[!? check_not_equal(NAME)] forward NAME -m failure : failure;
+		removeRule received(I)
+	] transition stopAfter 30000
+	  whenMsg success -> waitResponse,
+	  whenMsg failure -> waitUserRequest
+	  finally repeatPlan
 	
 	Plan waitResponse resumeLastPlan [
 		actorOp print(" --- [PR] waiting for a response --- ")
