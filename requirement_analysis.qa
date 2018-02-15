@@ -106,7 +106,7 @@ QActor qpatient_data_retriever context ctx_patient {
 		get_name(NAME) :- myID(ID),
 						  text_term(I,ID),
 						  text_concat('qpatient_data_retriever',I,NAME), !.		        
-							       
+							        
 		check_not_equal(NAME) :-  myID(ID), received(I),eval(lt,I,ID),get_name(NAME).
 		check_not_equal(NAME) :-  myID(ID), received(I),eval(gt,I,ID),get_name(NAME).
 	}
@@ -178,7 +178,7 @@ QActor qpatient_notification_receiver context ctx_patient {
 	  
 	Plan visualizeNotification resumeLastPlan [
 		actorOp print(" --- [PNR] receive notification --- ");
-		onMsg notification : notification(DESCRIPTION) -> actorOp print(DESCRIPTION)
+		onMsg notification : notification(ID, DESCRIPTION) -> actorOp print(DESCRIPTION)
 	]
 	
 }
@@ -292,7 +292,8 @@ QActor qdc_notification_manager context ctx_data_centre {
 	] switchTo waitNotification
 	
 	Plan waitNotification [
-		println(" --- [NM] waiting notification --- ")
+		println(" --- [NM] waiting notification --- ");
+		removeRule notification(_,_)
 	] transition stopAfter 86400000
 	  whenMsg notification -> handleNotification
 	  finally repeatPlan
@@ -300,10 +301,11 @@ QActor qdc_notification_manager context ctx_data_centre {
 	Plan handleNotification resumeLastPlan [
 		println(" --- [NM] handling notification --- ");
 		onMsg notification : notification(ID,DESCRIPTION) -> addRule notification(ID,DESCRIPTION);
-		[!? request_name('qpatient_notification_receiver',NAME,DESCRIPTION)] sendto NAME in ctx_patient_login -m notification : notification(DESCRIPTION);
+		[!? request_name('qpatient_notification_receiver',NAME,DESCRIPTION)] sendto NAME in ctx_patient_login -m notification : notification(ID,DESCRIPTION);
 		[!? notification(ID,febbre)] forward qdc_association_doctors_patients -m association : association(ID);
 		[!? notification(_,febbre)] forward qdc_notification_manager -m success : success;
-		[!? notification(_,non_febbre)] forward qdc_notification_manager -m failure : failure  			
+		[!? notification(_,non_febbre)] forward qdc_notification_manager -m failure : failure 
+		 			
 	] transition stopAfter 30000
 	  whenMsg success -> waitResponse,
 	  whenMsg failure -> waitNotification
@@ -321,7 +323,7 @@ QActor qdc_notification_manager context ctx_data_centre {
 	
 	Plan sendNotification [
 		println(" --- [NM] sending notifications --- ");
-		[!? request_doctor_name('qdoctor_notification_receiver',NAME,DESCRIPTION)] sendto NAME in ctx_doctor_login -m notification : notification(DESCRIPTION);
+		[!? request_doctor_name('qdoctor_notification_receiver',NAME,DESCRIPTION)] sendto NAME in ctx_doctor_login -m notification : notification(ID,DESCRIPTION);
 		[?? doc(_)] forward qdc_notification_manager -m repeat : repeat else forward qdc_notification_manager -m finish : finish
 	] transition stopAfter 120000
 	  whenMsg repeat -> sendNotification,
@@ -350,7 +352,7 @@ QActor qdc_association_doctors_patients context ctx_data_centre {
 	  whenMsg association -> handleRequest
 	  finally repeatPlan
 	  
-	Plan handleRequest [
+	Plan handleRequest resumeLastPlan [
 		println(" --- [DCADP] handling request --- ");
 		onMsg association : association(PATID) -> addRule patient(PATID);
 		actorOp memoCurrentCaller;
@@ -525,7 +527,7 @@ QActor qdoctor_notification_receiver context ctx_doctor {
 	  
 	Plan receiveNotification resumeLastPlan [
 		actorOp print(" --- [DNR] receive notification --- ");
-		onMsg notification : notification(DESCRIPTION) -> actorOp print(DESCRIPTION)
+		onMsg notification : notification(ID, DESCRIPTION) -> actorOp print(DESCRIPTION)
 	]
 	
 }
@@ -558,6 +560,7 @@ QActor qdoctor_notification_sender context ctx_doctor {
 	
 }
 
+/*
 QActor qcreate_actors context ctx_create_actors {
 	
 	Plan init normal [
@@ -570,4 +573,6 @@ QActor qcreate_actors context ctx_create_actors {
 	] finally repeatPlan 10
 	
 }
+* 
+*/
 
