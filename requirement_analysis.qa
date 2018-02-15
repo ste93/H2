@@ -4,10 +4,14 @@ Dispatch sending_patient_parameter : sending_patient_parameter(ID,PARAMETER,TIME
 Dispatch patient_parameters_request : patient_parameters_request(ID)
 Dispatch patient_parameters_request_from_doctor : patient_parameters_request_from_doctor(DOCID,PATID)
 Dispatch patient_parameters_response : patient_parameters_response(LIST)
-Dispatch notification : notification(DESCRIPTION)
+Dispatch notification : notification(ID,DESCRIPTION)
 Dispatch login_response : login_response(DESCRIPTION)
 Dispatch success : success
 Dispatch failure : failure
+Dispatch repeat : repeat
+Dispatch finish : finish 
+Dispatch association : association(PATID)
+Dispatch association_response : association_response(LIST)
 Event    patient_data_request : patient_data_request(ID)
 Event    doctor_data_request : doctor_data_request(ID)
 Event    doctor_notification_sender : doctor_notification_sender(NOTIFICATION)
@@ -167,13 +171,13 @@ QActor qpatient_notification_receiver context ctx_patient {
 	] switchTo waitNotification
 	
 	Plan waitNotification [
-		println(" --- [PNR] waiting notification --- ")
+		actorOp print(" --- [PNR] waiting notification --- ")
 	] transition stopAfter 86400000
 	  whenMsg notification -> visualizeNotification
 	  finally repeatPlan
 	  
 	Plan visualizeNotification resumeLastPlan [
-		println(" --- [PNR] receive notification --- ");
+		actorOp print(" --- [PNR] receive notification --- ");
 		onMsg notification : notification(DESCRIPTION) -> actorOp print(DESCRIPTION)
 	]
 	
@@ -214,7 +218,7 @@ QActor qdc_data_receiver context ctx_data_centre  {
 	
 	Plan sendToAnalyser [
 		println(" --- [DC] sending to analyzer --- ");
-		[!? patient_parameter(PARAMETER, TIMESTAMP)] forward qdc_analyser -m sending_patient_parameter : sending_patient_parameter(PARAMETER, TIMESTAMP) 
+		[!? patient_parameter(ID,PARAMETER, TIMESTAMP)] forward qdc_analyser -m sending_patient_parameter : sending_patient_parameter(ID,PARAMETER, TIMESTAMP) 
 	] switchTo waitMessages
 	
 	Plan handleRequest resumeLastPlan [
@@ -243,8 +247,8 @@ QActor qdc_analyser context ctx_data_centre {
 		analyser(VAL, non_febbre) :- eval(gt, 37, VAL), !.
 		analyser(37, non_febbre).
 		
-		analyse(RESP) :- 
-			parameter(PARAMETER),
+		analyse(ID,RESP) :- 
+			parameter(ID,PARAMETER),
 			analyser(PARAMETER, RESP).
 	}
 	
@@ -260,10 +264,10 @@ QActor qdc_analyser context ctx_data_centre {
 	  
 	Plan analyse resumeLastPlan [
 		println(" --- [A] analyzing parameter--- ");
-		onMsg sending_patient_parameter : sending_patient_parameter(PARAMETER, TIMESTAMP) -> addRule parameter(PARAMETER);
-		[!? analyse(RESP)] println(RESP);
-		[!? analyse(RESP)] forward qdc_notification_manager -m notification : notification(RESP);	
-		[!? analyse(RESP)] removeRule parameter(PARAMETER)
+		onMsg sending_patient_parameter : sending_patient_parameter(ID,PARAMETER, TIMESTAMP) -> addRule parameter(ID,PARAMETER);
+		[!? analyse(ID,RESP)] println(RESP);
+		[!? analyse(ID,RESP)] forward qdc_notification_manager -m notification : notification(ID,RESP);	
+		[!? analyse(ID,RESP)] removeRule parameter(ID,PARAMETER)
 	]
 	
 }
@@ -271,7 +275,16 @@ QActor qdc_analyser context ctx_data_centre {
 QActor qdc_notification_manager context ctx_data_centre {
 	
 	Rules {
-		send_to_doctor(febbre) :- notification(febbre).
+		request_name(A,NAME,DESCRIPTION) :- notification(ID,DESCRIPTION),
+									        text_term(I,ID),
+									        text_concat(A,I,NAME),!.
+									       
+		request_doctor_name(A,NAME,DESCRIPTION) :- doc(ID),
+		                                           notification(_,DESCRIPTION),
+									       		   text_term(I,ID),
+									               text_concat(A,I,NAME),!.
+		
+		send_to_doctor(febbre) :- notification(ID,febbre).
 	}
 	
 	Plan init normal [
@@ -281,16 +294,69 @@ QActor qdc_notification_manager context ctx_data_centre {
 	Plan waitNotification [
 		println(" --- [NM] waiting notification --- ")
 	] transition stopAfter 86400000
-	  whenMsg notification -> sendNotification
+	  whenMsg notification -> handleNotification
 	  finally repeatPlan
 	  
-	Plan sendNotification resumeLastPlan [
-		println(" --- [NM] sending notification --- ");
-		onMsg notification : notification(DESCRIPTION) -> addRule notification(DESCRIPTION); 
-		[!? send_to_doctor(DESCRIPTION)] forward qdoctor_notification_receiver -m notification : notification(DESCRIPTION);
-		[?? notification(DESCRIPTION)] forward qpatient_notification_receiver -m notification : notification(DESCRIPTION)			
-	]
+	Plan handleNotification resumeLastPlan [
+		println(" --- [NM] handling notification --- ");
+		onMsg notification : notification(ID,DESCRIPTION) -> addRule notification(ID,DESCRIPTION);
+		[!? request_name('qpatient_notification_receiver',NAME,DESCRIPTION)] sendto NAME in ctx_patient_login -m notification : notification(DESCRIPTION);
+		[!? notification(ID,febbre)] forward qdc_association_doctors_patients -m association : association(ID);
+		[!? notification(_,febbre)] forward qdc_notification_manager -m success : success;
+		[!? notification(_,non_febbre)] forward qdc_notification_manager -m failure : failure  			
+	] transition stopAfter 30000
+	  whenMsg success -> waitResponse,
+	  whenMsg failure -> waitNotification
 	
+	Plan waitResponse [
+		println(" --- [NM] waiting response --- ")
+	] transition stopAfter 120000
+	  whenMsg association_response -> getResponse
+	  finally repeatPlan
+	
+	Plan getResponse [
+		println(" --- [NM] handle response --- ");
+		onMsg association_response : association_response(LIST) -> actorOp getDoctors(LIST)
+	] switchTo sendNotification
+	
+	Plan sendNotification [
+		println(" --- [NM] sending notifications --- ");
+		[!? request_doctor_name('qdoctor_notification_receiver',NAME,DESCRIPTION)] sendto NAME in ctx_doctor_login -m notification : notification(DESCRIPTION);
+		[?? doc(_)] forward qdc_notification_manager -m repeat : repeat else forward qdc_notification_manager -m finish : finish
+	] transition stopAfter 120000
+	  whenMsg repeat -> sendNotification,
+	  whenMsg finish -> waitNotification
+	
+}
+
+QActor qdc_association_doctors_patients context ctx_data_centre {
+	
+	Rules {
+		//association(PATID,DOCID)
+		association(2,1).
+		association(2,2).
+		
+		get_associations(LIST) :- patient(PATID),findall(doc(X), association(PATID,X),LIST), retract(patient(PATID)),!.
+	
+	}
+	
+	Plan init normal [
+		println(" --- [DCADP] initializing --- ")	
+	] switchTo waitingRequest
+	
+	Plan waitingRequest [
+		println(" --- [DCADP] waiting request --- ")
+	] transition stopAfter 86400000
+	  whenMsg association -> handleRequest
+	  finally repeatPlan
+	  
+	Plan handleRequest [
+		println(" --- [DCADP] handling request --- ");
+		onMsg association : association(PATID) -> addRule patient(PATID);
+		actorOp memoCurrentCaller;
+		[!? get_associations(LIST)] replyToCaller -m association_response : association_response(LIST)
+	]
+
 }
 
 QActor qdc_user_manager context ctx_data_centre {
@@ -452,13 +518,13 @@ QActor qdoctor_notification_receiver context ctx_doctor {
 	] switchTo waitNotification
 	
 	Plan waitNotification [
-		println(" --- [DNR] waiting notification --- ")
+		actorOp print(" --- [DNR] waiting notification --- ")
 	] transition stopAfter 86400000
 	  whenMsg notification -> receiveNotification
 	  finally repeatPlan
 	  
 	Plan receiveNotification resumeLastPlan [
-		println(" --- [DNR] receive notification --- ");
+		actorOp print(" --- [DNR] receive notification --- ");
 		onMsg notification : notification(DESCRIPTION) -> actorOp print(DESCRIPTION)
 	]
 	
