@@ -25,8 +25,7 @@ public class Qdoctor_data_retriever extends AbstractQdoctor_data_retriever {
 	
 	public String getId(final String oldID) {
 		String newID = oldID.substring(0, oldID.length()-5);
-		String ID = newID.replaceAll("\\D+", ""); 
-//		System.out.println("IL NUMERO DEL MIO QACTOR è: " + ID);
+		String ID = newID.replaceAll("\\D+", "");
 		return ID;
 	}
 	
@@ -39,7 +38,6 @@ public class Qdoctor_data_retriever extends AbstractQdoctor_data_retriever {
 	}
 	
 	public void createGUI() {
-//		System.out.println("STO CREANDO LA GUIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII");
 		IBasicEnvAwt env = outEnvView.getEnv();
 		if(env == null) {
 			env = new EnvFrame("H2-doctor", Color.white, Color.black);

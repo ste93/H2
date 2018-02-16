@@ -1,26 +1,26 @@
 package it.unibo.qdoctor_notification_sender;
 
-import java.awt.Color;
-import java.awt.Label;
-import java.awt.Panel;
-
 import it.unibo.is.interfaces.IActivityBase;
 import it.unibo.system.SituatedPlainObject;
 import it.unibo.is.interfaces.IBasicEnvAwt;
 import it.unibo.qactors.QActorContext;
+import it.unibo.qactors.QActorMessage;
 import it.unibo.qactors.QActorUtils;
+import it.unibo.qactors.akka.QActor;
 
 public class CustomGUISupportAdvice extends SituatedPlainObject {
 
 	private IActivityBase cmdHandler;
 	private IBasicEnvAwt envAwt;
 	private QActorContext ctx;
+	private QActor qactor;
 	
-	public CustomGUISupportAdvice(IBasicEnvAwt env, QActorContext myCtx) {
+	public CustomGUISupportAdvice(IBasicEnvAwt env, QActorContext myCtx, QActor qactor) {
 		super(env);
 		envAwt = env;
 		init();
 		this.ctx = myCtx;
+		this.qactor = qactor;
 	}
 	
 	protected void init(){
@@ -60,12 +60,13 @@ public class CustomGUISupportAdvice extends SituatedPlainObject {
 		@Override
 		public void execAction(String cmd) {
 			String input = env.readln();
-//			println("CmdHandler -> " + cmd + " input= " + input);
-			try {
-				QActorUtils.raiseEvent(ctx, "input", "doctor_notification_sender", "doctor_notification_sender(" + input + ")");
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			if (input.length() > 0) { 
+				try {
+					QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "doctor_notification_sender_gui", qactor.getName().substring(0, qactor.getName().length() - 5), "dispatch", "doctor_notification_sender_gui("+input+")");
+					qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
+				} catch (Exception e2) {
+					e2.printStackTrace();
+				}
 			}
 		}
 	}
