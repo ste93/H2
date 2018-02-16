@@ -52,6 +52,10 @@ public class CustomGUIPatientLogin extends SituatedPlainObject {
 	public void printOnGUI(String str) {
 		println(str);
 	}
+	
+	public String getNickname() {
+		return env.readln();
+	}
 
 	private class CmdHandler extends SituatedPlainObject implements IActivityBase {
 	

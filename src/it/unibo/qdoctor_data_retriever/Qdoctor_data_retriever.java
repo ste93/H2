@@ -9,7 +9,6 @@ import it.unibo.baseEnv.basicFrame.EnvFrame;
 import it.unibo.is.interfaces.IBasicEnvAwt;
 import it.unibo.is.interfaces.IOutputEnvView;
 import it.unibo.qactors.QActorContext;
-import it.unibo.qpatient_data_retriever.CustomGUISupportPatient;
 
 public class Qdoctor_data_retriever extends AbstractQdoctor_data_retriever { 
 	
@@ -48,7 +47,7 @@ public class Qdoctor_data_retriever extends AbstractQdoctor_data_retriever {
 			((EnvFrame)env).setSize(800,430);
 		}
 		env.writeOnStatusBar("H2-doctor" + " | working ... ",14);
-		gui = new CustomGUISupportDoctor(env,myCtx,getId(actorId));
+		gui = new CustomGUISupportDoctor(env,myCtx,this);
 	}
 	
 }
