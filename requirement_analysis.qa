@@ -96,6 +96,9 @@ Dispatch restart : restart
 //go_on
 Dispatch go_on : go_on
 
+//not_found
+Dispatch not_found : not_found
+
 Context ctx_external_manager ip[host="localhost" port=8090]
 Context ctx_data_centre 	 ip[host="localhost" port=8070]
 Context ctx_patient 		 ip[host="localhost" port=8050]
@@ -224,7 +227,7 @@ QActor qdc_nickname_id_handler context ctx_data_centre {
 	Plan findID resumeLastPlan [
 		println(" --- [DCNIH] finding ID --- ");
 		onMsg id_request : id_request(USERNICKNAME) -> addRule user_nickname(USERNICKNAME);
-		[!? getting_ID(ACTORID)] forward qdc_notification_manager -m id_response : id_response(ACTORID);
+		[!? getting_ID(ACTORID)] forward qdc_notification_manager -m id_response : id_response(ACTORID) else forward qdc_notification_manager -m not_found : not_found;
 //		[!? getting_ID(ACTORID)] println(id_nickname_handleeeeeeeeeeeeeeeeeeeeeeeeeeeeeeerrrrrrrr(ACTORID));
 		removeRule user_nickname(_)
 	]
@@ -408,8 +411,17 @@ QActor qdc_notification_manager context ctx_data_centre {
 	Plan waitDoctorID [
 		println(" --- [DCNM] waiting doctor ID --- ")
 	] transition stopAfter 86400000
-	  whenMsg id_response -> sendNotificationToDoctor
+	  whenMsg id_response -> sendNotificationToDoctor,
+	  whenMsg not_found -> doctorNotFound
 	  finally repeatPlan
+	  
+	Plan doctorNotFound [
+		println(" --- [DCNM] doctor actor not found --- ");
+		removeRule doctor(_);
+		[!? doctor(_)] forward qdc_notification_manager -m repeat : repeat else forward qdc_notification_manager -m finish : finish
+	] transition stopAfter 86400000
+	  whenMsg repeat -> requestDoctorId,
+	  whenMsg finish -> waitParametersToSend
 	  
 	Plan sendNotificationToDoctor [
 		println(" --- [DCNM] sending notification to doctor --- ");
