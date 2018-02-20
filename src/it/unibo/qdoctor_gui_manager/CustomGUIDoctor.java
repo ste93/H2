@@ -1,4 +1,4 @@
-package it.unibo.qdc_register;
+package it.unibo.qdoctor_gui_manager;
 
 import it.unibo.is.interfaces.IActivityBase;
 import it.unibo.system.SituatedPlainObject;
@@ -8,19 +8,21 @@ import it.unibo.qactors.QActorMessage;
 import it.unibo.qactors.QActorUtils;
 import it.unibo.qactors.akka.QActor;
 
-public class CustomGUIRegistration extends SituatedPlainObject {
+public class CustomGUIDoctor extends SituatedPlainObject {
 
 	private IActivityBase cmdHandler;
 	private IBasicEnvAwt envAwt;
 	private QActorContext ctx;
 	private QActor qactor;
+	private String id;
 	
-	public CustomGUIRegistration(IBasicEnvAwt env, QActorContext myCtx, QActor qactor) {
+	public CustomGUIDoctor(IBasicEnvAwt env, QActorContext myCtx, QActor qactor, String id) {
 		super(env);
 		envAwt = env;
 		init();
 		this.ctx = myCtx;
 		this.qactor = qactor;
+		this.id = id;
 	}
 	
 	protected void init(){
@@ -30,7 +32,7 @@ public class CustomGUIRegistration extends SituatedPlainObject {
 	}
 	
 	protected void setCommandUI(){
-		envAwt.addCmdPanel("commandPanel", new String[]{"DOCTOR REGISTRATION", "PATIENT REGISTRATION"}, cmdHandler);
+		envAwt.addCmdPanel("commandPanel", new String[]{"SEND ADVICE", "RETRIEVE DATA"}, cmdHandler);
 	}
 	
 	protected void setInputUI(){
@@ -51,20 +53,21 @@ public class CustomGUIRegistration extends SituatedPlainObject {
 		public void execAction(String cmd) {
 			String input = env.readln();
 			switch (cmd) {
-				case "DOCTOR REGISTRATION":	
+				case "SEND ADVICE" : 
 					if (input.length() > 0) { 
 						try {
-							QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "registration_gui", "qdc_register", "dispatch", "registration_gui("+input+",d)");
+							QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "advice_to_send_gui", "qdoctor_advice_sender"+id, "dispatch", "advice_to_send_gui("+input+")");
 							qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
 						} catch (Exception e2) {
 							e2.printStackTrace();
 						}
 					}
 					break;
-				case "PATIENT REGISTRATION":
+					
+				case "RETRIEVE DATA": 
 					if (input.length() > 0) { 
 						try {
-							QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "registration_gui", "qdc_register", "dispatch", "registration_gui("+input+",p)");
+							QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "doctor_data_request_gui", "qdoctor_data_retriever"+id, "dispatch", "doctor_data_request_gui("+input+")");
 							qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
 						} catch (Exception e2) {
 							e2.printStackTrace();

@@ -99,6 +99,9 @@ Dispatch go_on : go_on
 //not_found
 Dispatch not_found : not_found
 
+//print_doctor_gui
+Dispatch print_doctor_gui : print_doctor_gui(X)
+
 Context ctx_external_manager ip[host="localhost" port=8090]
 Context ctx_data_centre 	 ip[host="localhost" port=8070]
 Context ctx_patient 		 ip[host="localhost" port=8050]
@@ -753,6 +756,7 @@ QActor qdoctor_login context ctx_doctor {
 		[!? newName(qdoctor_data_retriever, Name, N)] demo createActor(Name, 'it.unibo.qdoctor_data_retriever.Qdoctor_data_retriever');
 		[!? myNewName(qdoctor_notification_receiver, Name, N)] demo createActor(Name, 'it.unibo.qdoctor_notification_receiver.Qdoctor_notification_receiver');
 		[!? myNewName(qdoctor_advice_sender, Name, N)] demo createActor(Name, 'it.unibo.qdoctor_advice_sender.Qdoctor_advice_sender');
+		[!? myNewName(qdoctor_gui_manager, Name, N)] demo createActor(Name, 'it.unibo.qdoctor_gui_manager.Qdoctor_gui_manager');
 //		[!? myNewName(qdoctor_advice_result_receiver, Name, N)] demo createActor(Name, 'it.unibo.qdoctor_advice_result_receiver.Qdoctor_advice_result_receiver');
 		delay 3000;
 		[!? doctor_nickname_and_id(NICKNAME,ID)] forward qdc_nickname_id_handler -m nickname_id_association : nickname_id_association(NICKNAME,ID);
@@ -787,6 +791,7 @@ QActor qdoctor_initializing context ctx_doctor_init {
 		[!? nickname_and_actor('qdoctor_notification_receiver',NICKNAME,ACTORNAME)] sendto ACTORNAME in ctx_doctor -m my_nickname : my_nickname(NICKNAME);
 		[!? nickname_and_actor('qdoctor_data_retriever',NICKNAME,ACTORNAME)] sendto ACTORNAME in ctx_doctor -m my_nickname : my_nickname(NICKNAME);
 		[!? nickname_and_actor('qdoctor_advice_sender',NICKNAME,ACTORNAME)] sendto ACTORNAME in ctx_doctor -m my_nickname : my_nickname(NICKNAME);
+		[!? nickname_and_actor('qdoctor_gui_manager',NICKNAME,ACTORNAME)] sendto ACTORNAME in ctx_doctor -m my_nickname : my_nickname(NICKNAME);
 //		[!? nickname_and_actor('qdoctor_advice_result_receiver',NICKNAME,ACTORNAME)] sendto ACTORNAME in ctx_doctor -m my_nickname : my_nickname(NICKNAME);
 		removeRule nickname_and_id(_,_)
 	] switchTo waitMyNickname
@@ -801,7 +806,7 @@ QActor qdoctor_data_retriever context ctx_doctor_model {
 	
 	Plan init normal [
 		println(" --- [DDR] initializing --- ");
-		actorOp createGUI;
+		//actorOp createGUI;
 		[!? actorobj(ID)] actorOp getId(ID);
 		[?? actorOpDone(OP,R)] addRule my_actor_id(R)
 //		[!? actorobj(ID)] actorOp print(ID);
@@ -851,8 +856,8 @@ QActor qdoctor_data_retriever context ctx_doctor_model {
 QActor qdoctor_notification_receiver context ctx_doctor_model {
 	
 	Plan init normal [
-		println(" --- [DNR] initializing --- ");
-		actorOp createGUI
+		println(" --- [DNR] initializing --- ")
+		//actorOp createGUI
 	] switchTo waitMyNickname
 	
 	Plan waitMyNickname [
@@ -891,7 +896,7 @@ QActor qdoctor_advice_sender context ctx_doctor_model {
 	
 	Plan init normal [
 		println(" --- [DAS] initializing --- ");
-		actorOp createGUI;
+		//actorOp createGUI;
 		[!? actorobj(ID)] actorOp getId(ID);
 		[?? actorOpDone(OP,R)] addRule my_actor_id(R)
 	] switchTo waitMyNickname
@@ -909,8 +914,8 @@ QActor qdoctor_advice_sender context ctx_doctor_model {
 	] switchTo waitPatientNickname
 	
 	Plan waitPatientNickname [
-		println(" --- [DAS] waiting patient nickname --- ");
-		actorOp print("insert patient nickname")
+		println(" --- [DAS] waiting patient nickname --- ")
+		//actorOp print("insert patient nickname")
 	] transition stopAfter 86400000
 	  whenMsg advice_to_send_gui -> handlePatientNickname,
 	  whenMsg advice_to_send_result -> handleAdviceResult
@@ -918,9 +923,9 @@ QActor qdoctor_advice_sender context ctx_doctor_model {
 	
 	Plan handlePatientNickname [
 		println(" --- [DAS] getting patient nickname--- ");
-		onMsg advice_to_send_gui : advice_to_send_gui(PATIENTNICKNAME) -> addRule patient(PATIENTNICKNAME);
-		actorOp print("got nickname");
-		actorOp print("insert advice")
+		onMsg advice_to_send_gui : advice_to_send_gui(PATIENTNICKNAME) -> addRule patient(PATIENTNICKNAME)
+		//actorOp print("got nickname");
+		//actorOp print("insert advice")
 	] switchTo waitAdviceToSend
 	
 	Plan waitAdviceToSend [
@@ -932,7 +937,7 @@ QActor qdoctor_advice_sender context ctx_doctor_model {
 	Plan sendAdvice [
 		println(" --- [DAS] sending advice --- ");
 		onMsg advice_to_send_gui : advice_to_send_gui(ADVICE) -> addRule advice(ADVICE);
-		actorOp print("advice sent");
+		//actorOp print("advice sent");
 		[!? patient_and_advice(PATIENTNICKNAME,ADVICE,DOCTORNICKNAME,DOCTORACTORID)] 
 					forward qdc_notification_manager -m advice_to_send : advice_to_send(PATIENTNICKNAME,ADVICE,DOCTORNICKNAME,DOCTORACTORID);
 //		[!? patient_and_advice(PATIENTNICKNAME,ADVICE,DOCTORNICKNAME,DOCTORACTORID)] actorOp print(patient_and_advice(PATIENTNICKNAME,ADVICE,DOCTORNICKNAME,DOCTORACTORID));
@@ -944,5 +949,37 @@ QActor qdoctor_advice_sender context ctx_doctor_model {
 		println(" --- [DAS] sending advice --- ");
 		onMsg advice_to_send_result : advice_to_send_result(RESULT) -> actorOp print(RESULT)
 	] switchTo waitPatientNickname
+	
+}
+
+QActor qdoctor_gui_manager context ctx_doctor_model {
+	Plan init normal [
+		println(" --- [DGM] initializing --- ");
+		actorOp createGUI;
+		[!? actorobj(ID)] actorOp getId(ID);
+		[?? actorOpDone(OP,R)] addRule my_actor_id(R)
+	] switchTo waitMyNickname
+	
+	Plan waitMyNickname [
+		println(" --- [DGM] waiting my nickname --- ")
+	] transition stopAfter 86400000
+	  whenMsg my_nickname -> registerMyNickname
+	  finally repeatPlan
+	
+	Plan registerMyNickname [
+		println(" --- [DGM] registering my nickname --- ");
+		onMsg my_nickname : my_nickname(NICKNAME) -> addRule my_nickname(NICKNAME)
+	] switchTo waitingPrint
+	
+	Plan waitingPrint [
+		println(" --- [DGM] waiting string to print --- ")
+	] transition stopAfter 86400000
+	  whenMsg print_doctor_gui -> printMessage 
+	  finally repeatPlan
+	  
+	Plan printMessage [
+		onMsg print_doctor_gui : print_doctor_gui(X) -> actorOp print(X);
+		printCurrentMessage
+	] switchTo waitingPrint
 	
 }

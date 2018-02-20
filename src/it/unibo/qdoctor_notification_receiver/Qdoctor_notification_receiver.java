@@ -9,6 +9,8 @@ import it.unibo.baseEnv.basicFrame.EnvFrame;
 import it.unibo.is.interfaces.IBasicEnvAwt;
 import it.unibo.is.interfaces.IOutputEnvView;
 import it.unibo.qactors.QActorContext;
+import it.unibo.qactors.QActorMessage;
+import it.unibo.qactors.QActorUtils;
 import it.unibo.qdoctor_notification_receiver.CustomGUIDoctorNotifReceiver;
 
 public class Qdoctor_notification_receiver extends AbstractQdoctor_notification_receiver { 
@@ -33,7 +35,15 @@ public class Qdoctor_notification_receiver extends AbstractQdoctor_notification_
 	protected void addCmdPanel() {}
 	
 	public void print(String str) {
-		gui.printOnGUI(str);
+		String idActor = this.getId(this.getName());
+		QActorMessage mqa;
+		try {
+			mqa = QActorUtils.buildMsg(myCtx, this.getName(), "print_doctor_gui", "qdoctor_gui_manager"+ idActor, "dispatch", "print_doctor_gui('"+str+"')");
+			this.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+//		gui.printOnGUI(str);
 	}
 	
 	public void createGUI() {

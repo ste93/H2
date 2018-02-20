@@ -9,6 +9,8 @@ import it.unibo.baseEnv.basicFrame.EnvFrame;
 import it.unibo.is.interfaces.IBasicEnvAwt;
 import it.unibo.is.interfaces.IOutputEnvView;
 import it.unibo.qactors.QActorContext;
+import it.unibo.qactors.QActorMessage;
+import it.unibo.qactors.QActorUtils;
 import it.unibo.qdoctor_data_retriever.CustomGUIDoctorDataRetriever;
 
 public class Qdoctor_data_retriever extends AbstractQdoctor_data_retriever { 
@@ -33,8 +35,17 @@ public class Qdoctor_data_retriever extends AbstractQdoctor_data_retriever {
 	protected void addCmdPanel() {}
 	
 	public void print(String str) {
-		gui.printOnGUI(str);
+		String idActor = this.getId(this.getName());
+		QActorMessage mqa;
+		try {
+			mqa = QActorUtils.buildMsg(myCtx, this.getName(), "print_doctor_gui", "qdoctor_gui_manager"+ idActor, "dispatch", "print_doctor_gui('"+str+"')");
+			this.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+//		gui.printOnGUI(str);
 	}
+	
 	
 	public void createGUI() {
 		IBasicEnvAwt env = outEnvView.getEnv();
