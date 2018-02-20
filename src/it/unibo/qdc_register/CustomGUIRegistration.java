@@ -1,4 +1,4 @@
-package it.unibo.qdc_user_manager;
+package it.unibo.qdc_register;
 
 import java.awt.Color;
 import java.awt.Label;
@@ -8,19 +8,23 @@ import it.unibo.is.interfaces.IActivityBase;
 import it.unibo.system.SituatedPlainObject;
 import it.unibo.is.interfaces.IBasicEnvAwt;
 import it.unibo.qactors.QActorContext;
+import it.unibo.qactors.QActorMessage;
 import it.unibo.qactors.QActorUtils;
+import it.unibo.qactors.akka.QActor;
 
 public class CustomGUIRegistration extends SituatedPlainObject {
 
 	private IActivityBase cmdHandler;
 	private IBasicEnvAwt envAwt;
 	private QActorContext ctx;
+	private QActor qactor;
 	
-	public CustomGUIRegistration(IBasicEnvAwt env, QActorContext myCtx) {
+	public CustomGUIRegistration(IBasicEnvAwt env, QActorContext myCtx, QActor qactor) {
 		super(env);
 		envAwt = env;
 		init();
 		this.ctx = myCtx;
+		this.qactor = qactor;
 	}
 	
 	protected void init(){
@@ -60,22 +64,26 @@ public class CustomGUIRegistration extends SituatedPlainObject {
 		@Override
 		public void execAction(String cmd) {
 			String input = env.readln();
-//			println("CmdHandler -> " + cmd + " input= " + input);
 			switch (cmd) {
 			case "DOCTOR REGISTRATION":	
-				try {
-					QActorUtils.raiseEvent(ctx, "input", "register_request", "register_request(" + input + ",d)");
-				} catch (Exception e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+				if (input.length() > 0) { 
+					try {
+						//QActorUtils.buildMsg(ctx, senderId, msgID, destActorId, msgType, msg)
+						QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "registration_gui", "qdc_register", "dispatch", "registration_gui("+input+",d)");
+						qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
+					} catch (Exception e2) {
+						e2.printStackTrace();
+					}
 				}
 				break;
 			case "PATIENT REGISTRATION":
-				try {
-					QActorUtils.raiseEvent(ctx, "input", "register_request", "register_request(" + input + ",p)");
-				} catch (Exception e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+				if (input.length() > 0) { 
+					try {
+						QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "registration_gui", "qdc_register", "dispatch", "registration_gui("+input+",p)");
+						qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
+					} catch (Exception e2) {
+						e2.printStackTrace();
+					}
 				}
 				break;
 			}

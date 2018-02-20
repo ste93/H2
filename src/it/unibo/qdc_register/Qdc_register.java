@@ -2,20 +2,20 @@
 /*
 This code is generated only ONCE
 */
-package it.unibo.qdc_user_manager;
+package it.unibo.qdc_register;
 import java.awt.Color;
 
 import it.unibo.baseEnv.basicFrame.EnvFrame;
 import it.unibo.is.interfaces.IBasicEnvAwt;
 import it.unibo.is.interfaces.IOutputEnvView;
 import it.unibo.qactors.QActorContext;
-import it.unibo.qdoctor_notification_sender.CustomGUISupportAdvice;
+import it.unibo.qdc_register.CustomGUIRegistration;
 
-public class Qdc_user_manager extends AbstractQdc_user_manager { 
+public class Qdc_register extends AbstractQdc_register { 
 	
 	private CustomGUIRegistration gui;
 	
-	public Qdc_user_manager(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
+	public Qdc_register(String actorId, QActorContext myCtx, IOutputEnvView outEnvView)  throws Exception{
 		super(actorId, myCtx, outEnvView);
 	}
 /*
@@ -38,6 +38,6 @@ public class Qdc_user_manager extends AbstractQdc_user_manager {
 			((EnvFrame)env).setSize(800,430);
 		}
 		env.writeOnStatusBar("H2-Registration" + " | working ... ",14);
-		gui = new CustomGUIRegistration(env,myCtx);
+		gui = new CustomGUIRegistration(env,myCtx,this);
 	}
 }

@@ -1,27 +1,27 @@
 package it.unibo.qpatient_data_retriever;
 
-import java.awt.Color;
-import java.awt.Label;
-import java.awt.Panel;
-
 import it.unibo.is.interfaces.IActivityBase;
 import it.unibo.system.SituatedPlainObject;
 import it.unibo.is.interfaces.IBasicEnvAwt;
 import it.unibo.qactors.QActorContext;
+import it.unibo.qactors.QActorMessage;
 import it.unibo.qactors.QActorUtils;
+import it.unibo.qactors.akka.QActor;
 
 public class CustomGUISupportPatient extends SituatedPlainObject {
 
 	private IActivityBase cmdHandler;
 	private IBasicEnvAwt envAwt;
 	private QActorContext ctx;
+	private QActor qactor;
 	private String id;
 	
-	public CustomGUISupportPatient(IBasicEnvAwt env, QActorContext myCtx, String id) {
+	public CustomGUISupportPatient(IBasicEnvAwt env, QActorContext myCtx, QActor qactor, String id) {
 		super(env);
 		envAwt = env;
 		init();
 		this.ctx = myCtx;
+		this.qactor = qactor;
 		this.id = id;
 	}
 	
@@ -60,14 +60,13 @@ public class CustomGUISupportPatient extends SituatedPlainObject {
 		}
 		
 		@Override
-		public void execAction(String cmd) {
-			String input = env.readln();
-//			println("CmdHandler -> " + cmd + " input= " + input);
+		public void execAction(String cmd) { 
 			try {
-				QActorUtils.raiseEvent(ctx, "input", "patient_data_request", "patient_data_request("+id+")");
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				//QActorUtils.buildMsg(ctx, senderId, msgID, destActorId, msgType, msg)
+				QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "patient_data_request_gui", "qpatient_data_retriever"+id, "dispatch", "patient_data_request_gui");
+				qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
+			} catch (Exception e2) {
+				e2.printStackTrace();
 			}
 		}
 	}

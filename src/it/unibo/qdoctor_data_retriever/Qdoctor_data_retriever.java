@@ -9,15 +9,14 @@ import it.unibo.baseEnv.basicFrame.EnvFrame;
 import it.unibo.is.interfaces.IBasicEnvAwt;
 import it.unibo.is.interfaces.IOutputEnvView;
 import it.unibo.qactors.QActorContext;
+import it.unibo.qdoctor_data_retriever.CustomGUIDoctorDataRetriever;
 
 public class Qdoctor_data_retriever extends AbstractQdoctor_data_retriever { 
 	
-	private CustomGUISupportDoctor gui;
+	private CustomGUIDoctorDataRetriever gui;
 	
-	public Qdoctor_data_retriever(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
+	public Qdoctor_data_retriever(String actorId, QActorContext myCtx, IOutputEnvView outEnvView)  throws Exception{
 		super(actorId, myCtx, outEnvView);
-		System.out.println("NOME DELL'ATTORE: " + actorId);
-		System.out.println("CONTESTO DELL'ATTORE: " + myCtx.getName());
 	}
 /*
  * ADDED BY THE APPLICATION DESIGNER	
@@ -40,12 +39,11 @@ public class Qdoctor_data_retriever extends AbstractQdoctor_data_retriever {
 	public void createGUI() {
 		IBasicEnvAwt env = outEnvView.getEnv();
 		if(env == null) {
-			env = new EnvFrame("H2-doctor", Color.white, Color.black);
+			env = new EnvFrame("H2 - Doctor Data Retriever", Color.white, Color.black);
 			env.init();
 			((EnvFrame)env).setSize(800,430);
 		}
-		env.writeOnStatusBar("H2-doctor" + " | working ... ",14);
-		gui = new CustomGUISupportDoctor(env,myCtx,this);
-	}
-	
+		env.writeOnStatusBar("H2 - Doctor Data Retriever" + " | working ... ",14);
+		gui = new CustomGUIDoctorDataRetriever(env,myCtx,this,this.getId(this.getName()));
+}
 }

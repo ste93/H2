@@ -2,22 +2,21 @@
 /*
 This code is generated only ONCE
 */
-package it.unibo.qdoctor_notification_sender;
+package it.unibo.qdoctor_advice_sender;
 import java.awt.Color;
 
 import it.unibo.baseEnv.basicFrame.EnvFrame;
 import it.unibo.is.interfaces.IBasicEnvAwt;
 import it.unibo.is.interfaces.IOutputEnvView;
 import it.unibo.qactors.QActorContext;
+import it.unibo.qdoctor_advice_sender.CustomGUIAdviceSender;
 
-public class Qdoctor_notification_sender extends AbstractQdoctor_notification_sender {
+public class Qdoctor_advice_sender extends AbstractQdoctor_advice_sender { 
 	
-	private CustomGUISupportAdvice gui;
+	private CustomGUIAdviceSender gui;
 	
-	public Qdoctor_notification_sender(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
+	public Qdoctor_advice_sender(String actorId, QActorContext myCtx, IOutputEnvView outEnvView)  throws Exception{
 		super(actorId, myCtx, outEnvView);
-		System.out.println("NOME DELL'ATTORE: " + actorId);
-		System.out.println("CONTESTO DELL'ATTORE: " + myCtx.getName());
 	}
 /*
  * ADDED BY THE APPLICATION DESIGNER	
@@ -26,10 +25,9 @@ public class Qdoctor_notification_sender extends AbstractQdoctor_notification_se
 	public String getId(final String oldID) {
 		String newID = oldID.substring(0, oldID.length()-5);
 		String ID = newID.replaceAll("\\D+", "");
-		System.out.println("ID CHE PRENDO DALL'ATTORE DEL DOTTORE " + ID);
 		return ID;
 	}
-
+	
 	protected void addInputPanel(int size) {}
 	
 	protected void addCmdPanel() {}
@@ -41,12 +39,11 @@ public class Qdoctor_notification_sender extends AbstractQdoctor_notification_se
 	public void createGUI() {
 		IBasicEnvAwt env = outEnvView.getEnv();
 		if(env == null) {
-			env = new EnvFrame("H2-advice", Color.white, Color.black);
+			env = new EnvFrame("H2 - Doctor Advice Sender", Color.white, Color.black);
 			env.init();
 			((EnvFrame)env).setSize(800,430);
 		}
-		env.writeOnStatusBar("H2-advice" + " | working ... ",14);
-		gui = new CustomGUISupportAdvice(env,myCtx,this);
+		env.writeOnStatusBar("H2 - Doctor Advice Sender" + " | working ... ",14);
+		gui = new CustomGUIAdviceSender(env,myCtx,this,this.getId(this.getName()));
 	}
-	
 }

@@ -3,32 +3,28 @@
 This code is generated only ONCE
 */
 package it.unibo.qpatient_data_retriever;
-import it.unibo.is.interfaces.IOutputEnvView;
-import it.unibo.qactors.QActorContext;
+import java.awt.Color;
+
+import it.unibo.baseEnv.basicFrame.EnvFrame;
 import it.unibo.is.interfaces.IBasicEnvAwt;
 import it.unibo.is.interfaces.IOutputEnvView;
-import it.unibo.baseEnv.basicFrame.EnvFrame;
-
-import java.awt.Color;
+import it.unibo.qactors.QActorContext;
+import it.unibo.qdoctor_data_retriever.CustomGUIDoctorDataRetriever;
 
 public class Qpatient_data_retriever extends AbstractQpatient_data_retriever { 
 	
-//	private static IOutputEnvView outEnvView;
 	private CustomGUISupportPatient gui;
 	
 	public Qpatient_data_retriever(String actorId, QActorContext myCtx, IOutputEnvView outEnvView)  throws Exception{
 		super(actorId, myCtx, outEnvView);
-//		System.out.println("PAZIENTE NOME DELL'ATTORE: " + actorId);
-//		System.out.println("PAZIENTE CONTESTO DELL'ATTORE: " + myCtx.getName());		
 	}
 /*
  * ADDED BY THE APPLICATION DESIGNER	
  */
-
+	
 	public String getId(final String oldID) {
 		String newID = oldID.substring(0, oldID.length()-5);
-		String ID = newID.replaceAll("\\D+", ""); 
-//		System.out.println("IL NUMERO DEL MIO QACTOR è: " + ID);
+		String ID = newID.replaceAll("\\D+", "");
 		return ID;
 	}
 	
@@ -41,15 +37,13 @@ public class Qpatient_data_retriever extends AbstractQpatient_data_retriever {
 	}
 	
 	public void createGUI() {
-//		System.out.println("STO CREANDO LA GUIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII");
 		IBasicEnvAwt env = outEnvView.getEnv();
 		if(env == null) {
-			env = new EnvFrame("H2-patient", Color.green, Color.black);
+			env = new EnvFrame("H2 - Patient Data Retriever", Color.green, Color.black);
 			env.init();
 			((EnvFrame)env).setSize(800,430);
 		}
-		env.writeOnStatusBar("H2-patient" + " | working ... ",14);
-		gui = new CustomGUISupportPatient(env,myCtx,getId(actorId));
+		env.writeOnStatusBar("H2 - Patient Data Retriever" + " | working ... ",14);
+		gui = new CustomGUISupportPatient(env,myCtx,this,this.getId(this.getName()));
 	}
-	
 }

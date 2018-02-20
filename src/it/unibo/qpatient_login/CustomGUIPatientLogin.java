@@ -8,21 +8,23 @@ import it.unibo.is.interfaces.IActivityBase;
 import it.unibo.system.SituatedPlainObject;
 import it.unibo.is.interfaces.IBasicEnvAwt;
 import it.unibo.qactors.QActorContext;
+import it.unibo.qactors.QActorMessage;
 import it.unibo.qactors.QActorUtils;
+import it.unibo.qactors.akka.QActor;
 
 public class CustomGUIPatientLogin extends SituatedPlainObject {
 
 	private IActivityBase cmdHandler;
 	private IBasicEnvAwt envAwt;
 	private QActorContext ctx;
-	private String actorId;
+	private QActor qactor;
 	
-	public CustomGUIPatientLogin(IBasicEnvAwt env, String actorId, QActorContext myCtx) {
+	public CustomGUIPatientLogin(IBasicEnvAwt env, QActorContext myCtx, QActor qactor) {
 		super(env);
 		envAwt = env;
 		init();
 		this.ctx = myCtx;
-		this.actorId = actorId;
+		this.qactor = qactor;
 	}
 	
 	protected void init(){
@@ -66,13 +68,14 @@ public class CustomGUIPatientLogin extends SituatedPlainObject {
 		@Override
 		public void execAction(String cmd) {
 			String input = env.readln();
-//			println("CmdHandler -> " + cmd + " input= " + input);
-			String acId = actorId.substring(0, actorId.length()-5);
-			try {
-				QActorUtils.raiseEvent(ctx, "input", "login_request", "login_request(" + input + ",p," + acId + ")");
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			if (input.length() > 0) { 
+				try {
+					//QActorUtils.buildMsg(ctx, senderId, msgID, destActorId, msgType, msg)
+					QActorMessage mqa = QActorUtils.buildMsg(ctx, "patient login gui", "login_patient_gui", "qpatient_login", "dispatch", "login_patient_gui("+input+")");
+					qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
+				} catch (Exception e2) {
+					e2.printStackTrace();
+				}
 			}
 		}
 	}

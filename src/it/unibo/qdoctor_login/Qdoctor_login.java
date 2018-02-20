@@ -9,18 +9,24 @@ import it.unibo.baseEnv.basicFrame.EnvFrame;
 import it.unibo.is.interfaces.IBasicEnvAwt;
 import it.unibo.is.interfaces.IOutputEnvView;
 import it.unibo.qactors.QActorContext;
-import it.unibo.qdc_user_manager.CustomGUIRegistration;
+import it.unibo.qpatient_login.CustomGUIPatientLogin;
 
 public class Qdoctor_login extends AbstractQdoctor_login { 
-
+	
 	private CustomGUIDoctorLogin gui;
-
-	public Qdoctor_login(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
+	
+	public Qdoctor_login(String actorId, QActorContext myCtx, IOutputEnvView outEnvView)  throws Exception{
 		super(actorId, myCtx, outEnvView);
 	}
 /*
  * ADDED BY THE APPLICATION DESIGNER	
  */
+	
+	public String getId(final String oldID) {
+		String newID = oldID.substring(0, oldID.length()-5);
+		String ID = newID.replaceAll("\\D+", "");
+		return ID;
+	}
 	
 	protected void addInputPanel(int size) {}
 	
@@ -33,11 +39,11 @@ public class Qdoctor_login extends AbstractQdoctor_login {
 	public void createGUI() {
 		IBasicEnvAwt env = outEnvView.getEnv();
 		if(env == null) {
-			env = new EnvFrame("H2-Doctor Login", Color.white, Color.black);
+			env = new EnvFrame("H2 - Doctor Login", Color.white, Color.black);
 			env.init();
 			((EnvFrame)env).setSize(800,430);
 		}
-		env.writeOnStatusBar("H2-Doctor Login" + " | working ... ",14);
-		gui = new CustomGUIDoctorLogin(env,actorId,myCtx);
+		env.writeOnStatusBar("H2 - Doctor Login" + " | working ... ",14);
+		gui = new CustomGUIDoctorLogin(env,myCtx,this);
 	}
 }

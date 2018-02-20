@@ -8,21 +8,23 @@ import it.unibo.is.interfaces.IActivityBase;
 import it.unibo.system.SituatedPlainObject;
 import it.unibo.is.interfaces.IBasicEnvAwt;
 import it.unibo.qactors.QActorContext;
+import it.unibo.qactors.QActorMessage;
 import it.unibo.qactors.QActorUtils;
+import it.unibo.qactors.akka.QActor;
 
 public class CustomGUIDoctorLogin extends SituatedPlainObject {
 
 	private IActivityBase cmdHandler;
 	private IBasicEnvAwt envAwt;
 	private QActorContext ctx;
-	private String actorId;
+	private QActor qactor;
 	
-	public CustomGUIDoctorLogin(IBasicEnvAwt env, String actorId, QActorContext myCtx) {
+	public CustomGUIDoctorLogin(IBasicEnvAwt env, QActorContext myCtx, QActor qactor) {
 		super(env);
 		envAwt = env;
 		init();
 		this.ctx = myCtx;
-		this.actorId = actorId;
+		this.qactor = qactor;
 	}
 	
 	protected void init(){
@@ -52,6 +54,10 @@ public class CustomGUIDoctorLogin extends SituatedPlainObject {
 	public void printOnGUI(String str) {
 		println(str);
 	}
+	
+	public String getNickname() {
+		return env.readln();
+	}
 
 	private class CmdHandler extends SituatedPlainObject implements IActivityBase {
 	
@@ -62,13 +68,14 @@ public class CustomGUIDoctorLogin extends SituatedPlainObject {
 		@Override
 		public void execAction(String cmd) {
 			String input = env.readln();
-//			println("CmdHandler -> " + cmd + " input= " + input);
-			String acId = actorId.substring(0, actorId.length()-5);
-			try {
-				QActorUtils.raiseEvent(ctx, "input", "login_request", "login_request(" + input + ",d," + acId + ")");
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			if (input.length() > 0) { 
+				try {
+					//QActorUtils.buildMsg(ctx, senderId, msgID, destActorId, msgType, msg)
+					QActorMessage mqa = QActorUtils.buildMsg(ctx, "doctor login gui", "login_doctor_gui", "qdoctor_login", "dispatch", "login_doctor_gui("+input+")");
+					qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
+				} catch (Exception e2) {
+					e2.printStackTrace();
+				}
 			}
 		}
 	}

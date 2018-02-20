@@ -2,12 +2,12 @@
 /*
 This code is generated only ONCE
 */
-package it.unibo.qdc_analyser;
+package it.unibo.qmanager;
 import it.unibo.is.interfaces.IOutputEnvView;
 import it.unibo.qactors.QActorContext;
 
-public class Qdc_analyser extends AbstractQdc_analyser { 
-	public Qdc_analyser(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
+public class Qmanager extends AbstractQmanager { 
+	public Qmanager(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
 		super(actorId, myCtx, outEnvView);
 	}
 /*

@@ -9,20 +9,24 @@ import it.unibo.baseEnv.basicFrame.EnvFrame;
 import it.unibo.is.interfaces.IBasicEnvAwt;
 import it.unibo.is.interfaces.IOutputEnvView;
 import it.unibo.qactors.QActorContext;
-import it.unibo.qdoctor_notification_receiver.CustomGUIDoctorNotifReceiver;
+import it.unibo.qpatient_notification_receiver.CustomGUIPatientNotifReceiver;
 
 public class Qpatient_notification_receiver extends AbstractQpatient_notification_receiver { 
 	
 	private CustomGUIPatientNotifReceiver gui;
-
-	public Qpatient_notification_receiver(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
+	
+	public Qpatient_notification_receiver(String actorId, QActorContext myCtx, IOutputEnvView outEnvView)  throws Exception{
 		super(actorId, myCtx, outEnvView);
-		System.out.println("PAZIENTE NOME DELL'ATTORE: " + actorId);
-		System.out.println("PAZIENTE CONTESTO DELL'ATTORE: " + myCtx.getName());
 	}
 /*
  * ADDED BY THE APPLICATION DESIGNER	
  */
+	
+	public String getId(final String oldID) {
+		String newID = oldID.substring(0, oldID.length()-5);
+		String ID = newID.replaceAll("\\D+", "");
+		return ID;
+	}
 	
 	protected void addInputPanel(int size) {}
 	
@@ -35,11 +39,11 @@ public class Qpatient_notification_receiver extends AbstractQpatient_notificatio
 	public void createGUI() {
 		IBasicEnvAwt env = outEnvView.getEnv();
 		if(env == null) {
-			env = new EnvFrame("H2-Patient Notification Receiver", Color.green, Color.black);
+			env = new EnvFrame("H2 - Patient Notification Receiver", Color.green, Color.black);
 			env.init();
 			((EnvFrame)env).setSize(800,430);
 		}
-		env.writeOnStatusBar("H2-Patient Notification Receiver" + " | working ... ",14);
-		gui = new CustomGUIPatientNotifReceiver(env,actorId,myCtx);
+		env.writeOnStatusBar("H2 - Patient Notification Receiver" + " | working ... ",14);
+		gui = new CustomGUIPatientNotifReceiver(env,myCtx);
 	}
 }

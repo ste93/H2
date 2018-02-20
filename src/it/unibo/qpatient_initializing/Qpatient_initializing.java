@@ -2,12 +2,12 @@
 /*
 This code is generated only ONCE
 */
-package it.unibo.qmanager_associations;
+package it.unibo.qpatient_initializing;
 import it.unibo.is.interfaces.IOutputEnvView;
 import it.unibo.qactors.QActorContext;
 
-public class Qmanager_associations extends AbstractQmanager_associations { 
-	public Qmanager_associations(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
+public class Qpatient_initializing extends AbstractQpatient_initializing { 
+	public Qpatient_initializing(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
 		super(actorId, myCtx, outEnvView);
 	}
 /*

@@ -1,41 +1,473 @@
-System h2
+System adviceFromDoctor
 
-Dispatch sending_patient_parameter : sending_patient_parameter(ID,PARAMETER,TIMESTAMP)
-Dispatch patient_parameters_request : patient_parameters_request(ID)
-Dispatch patient_parameters_request_from_doctor : patient_parameters_request_from_doctor(DOCID,PATID)
-Dispatch patient_parameters_response : patient_parameters_response(LIST)
-Dispatch notification : notification(ID,DESCRIPTION)
-Dispatch advice : advice(DOCID,NICKNAME,DESCRIPTION)
-Dispatch login_response : login_response(NICKNAME,DESCRIPTION)
-Dispatch success : success
-Dispatch failure : failure
-Dispatch repeat : repeat
+//registration(user nickname,user role - doctor or patient)
+Dispatch registration_gui : registration_gui(NICKNAME,ROLE)
+
+//login_patient_gui(patient nickname)
+Dispatch login_patient_gui : login_patient_gui(NICKNAME)
+
+//login_doctor_gui(doctor nickname)
+Dispatch login_doctor_gui : login_doctor_gui(NICKNAME)
+
+//check_login(user nickname,user role - doctor or patient)
+Dispatch check_login : check_login(NICKNAME,ROLE)
+
+//login_result(the result of the login request)
+Dispatch login_result : login_result(RESULT)
+
+//nickname_and_id(user nickname, user's actors id)
+Dispatch nickname_and_id : nickname_and_id(NICKNAME,ID)
+
+//my_nickname(user nickname)
+Dispatch my_nickname : my_nickname(NICKNAME)
+
+//recorded_parameter(nickname of the patient to whom parameter belong, id of the actor to reply to, recorded parameter to send to the data collector)
+Dispatch recorded_parameter: recorded_parameter(NICKNAME,ACTORID,PARAMETER)
+
+//patient_data_request_gui
+Dispatch patient_data_request_gui : patient_data_request_gui
+
+//doctor_data_request_gui(nickname of the patient of whom i want the clinical history)
+Dispatch doctor_data_request_gui : doctor_data_request_gui(PATIENTNICKNAME)
+
+//clinical_history_request(nickname of the patient that made the request, id of the actor to reply to)
+Dispatch clinical_history_request : clinical_history_request(PATIENTNICKNAME,ACTORID)
+
+//clinical_history_response(patient clinical history)
+Dispatch clinical_history_response : clinical_history_response(HISTORY)
+
+//clinical_history_request_from_doctor(nickname of the doctor that made the request, nickname of the patient of whom i want the clinical history, id of the actor to reply to)
+Dispatch clinical_history_request_from_doctor : clinical_history_request_from_doctor(DOCTORNICKNAME,PATIENTNICKNAME,ACTORID)
+
+//check_patient_doctor_association(nickname of the doctor, nickname of the patient)
+Dispatch check_patient_doctor_association : check_patient_doctor_association(DOCTORNICKNAME,PATIENTNICKNAME)
+
+//check_patient_doctor_association_result(check association result)
+Dispatch check_patient_doctor_association_result : check_patient_doctor_association_result(RESULT)
+
+//analyse_parameter(nickname of the patient to whom parameter belong, id of the actor to reply to, parameter to be analyse)
+Dispatch analyse_parameter : analyse_parameter(PATIENTNICKNAME,ACTORID,PARAMETER)
+
+//analysis_result(nickname of the patient to whom parameter belong, id of the actor to reply to, analysis result)
+Dispatch analysis_result : analysis_result(PATIENTNICKNAME,ACTORID,RESULT)
+
+//analysis_notification(analysis result)
+Dispatch analysis_notification : analysis_notification(ANALYSIS)
+
+//analysis_notification_of_patient(analysis result, patient nickname)
+Dispatch analysis_notification_of_patient : analysis_notification_of_patient(ANALYSIS,PATIENTNICKNAME)
+
+//doctors_associate_with_patient(nickname of the patient to whom I want to know doctors associate)
+Dispatch doctors_associate_with_patient : doctors_associate_with_patient(PATIENTNICKNAME)
+
+//doctors_associate_with_patient_response(list of doctors associate with the patient)
+Dispatch doctors_associate_with_patient_response : doctors_associate_with_patient_response(DOCTORS)
+
+//nickname_id_association(user nickname, the ID of user's actors)
+Dispatch nickname_id_association : nickname_id_association(USERNICKNAME,ACTORID)
+
+//id_request(nickname of the user to whom I want to know actors' ID)
+Dispatch id_request : id_request(USERNICKNAME)
+
+//id_response(ID of user's actors)
+Dispatch id_response : id_response(USERID)
+
+//advice_to_send_gui(FIRST INPUT: patient nickname, SECOND INPUT: advice to send to patient)
+Dispatch advice_to_send_gui : advice_to_send_gui(INPUT)
+
+//advice_to_send(patient nickname, advice to send to patient, doctor nickname, ID of doctor's actor)
+Dispatch advice_to_send : advice_to_send(PATIENTNICKNAME,ADVICE,DOCTORNICKNAME,DOCTORACTORID)
+
+//advice_to_send_result(if patient is not associate with the doctor)
+Dispatch advice_to_send_result : advice_to_send_result(RESULT)
+
+//doctor_advice(advice, doctor nickname)
+Dispatch doctor_advice : doctor_advice(ADVICE,DOCTORNICKNAME)
+
+//repeat 
+Dispatch repeat: repeat
+
+//finish
 Dispatch finish : finish
-Dispatch association : association(PATID)
-Dispatch association_response : association_response(LIST)
-Dispatch check_association : check_association(DOCID,PATID)
-Dispatch check_association_response : check_association_response(RESP)
-Dispatch request_id : request_id(ACTORNAME,DOCID,NICKNAME)
-Dispatch request_id_response : request_id_response(ID)
-Dispatch register_nickname : register_nickname(ID,NICKNAME)
-Dispatch doctor_data_request_gui : doctor_data_request_gui(PATNICKNAME)
-Dispatch doctor_notification_sender_gui : doctor_notification_sender_gui(INPUT)
-Event    patient_data_request : patient_data_request(ID)
-Event    register_request : register_request(NICKNAME,TYPE)
-Event    login_request : login_request(NICKNAME,TYPE,NAME)
-Event    patient_login : patient_login
-Event    doctor_login : doctor_login
 
+//restart 
+Dispatch restart : restart
 
-//requirements: business 1,2,3,4,5,6,7 e functional 1,2,3,4,5,6,7
-Context ctx_data_centre 	ip[host="localhost" port=8070] //-g cyan
-Context ctx_manager 	ip[host="localhost" port=8050] //-g cyan
-Context ctx_patient 	ip[host="localhost" port=1278] //-g green
-Context ctx_patient_model 		ip[host="localhost" port=1234] //-g green
-Context ctx_doctor  	ip[host="localhost" port=3478] //-g white
-Context ctx_doctor_model  		ip[host="localhost" port=3456] //-g white
+//go_on
+Dispatch go_on : go_on
 
-EventHandler evh for patient_data_request, register_request, login_request -print;
+Context ctx_external_manager ip[host="localhost" port=8090]
+Context ctx_data_centre 	 ip[host="localhost" port=8070]
+Context ctx_patient 		 ip[host="localhost" port=8050]
+Context ctx_patient_init	 ip[host="localhost" port=1233]
+Context ctx_patient_model 	 ip[host="localhost" port=1234]
+Context ctx_doctor 			 ip[host="localhost" port=8060]
+Context ctx_doctor_init 	 ip[host="localhost" port=1235]
+Context ctx_doctor_model 	 ip[host="localhost" port=1236]
+
+QActor qmanager context ctx_external_manager {
+	
+	Rules {
+		//association(doctor nickname,patient nickname).
+		association("d","a").
+		association("d","b").
+		association("c","a").
+		
+		check_result("ok") :- check(DOCTORNICKNAME,PATIENTNICKNAME), association(DOCTORNICKNAME,PATIENTNICKNAME),!.
+		check_result("no") :- !.
+		
+		doctors(DOCTORS) :- findDoctors(PATIENTNICKNAME),
+							findall(doctor(X),association(X,PATIENTNICKNAME),DOCTORS), !.
+	}
+	
+	Plan init normal [
+		println(" --- [M] initializing --- ")
+	] switchTo waitAssociation
+	
+	Plan waitAssociation [
+		println(" --- [M] waiting association between doctor and patient--- ")
+	] transition stopAfter 86400000
+	  whenMsg check_patient_doctor_association -> checkAssociation,
+	  whenMsg doctors_associate_with_patient -> findDoctors 
+	  finally repeatPlan
+	
+	Plan checkAssociation resumeLastPlan [
+		println(" --- [M] checking association --- ");
+		onMsg check_patient_doctor_association: check_patient_doctor_association(DOCTORNICKNAME,PATIENTNICKNAME) -> addRule check(DOCTORNICKNAME,PATIENTNICKNAME);
+		actorOp memoCurrentCaller;
+		[!? check_result(RESULT)] replyToCaller -m check_patient_doctor_association_result : check_patient_doctor_association_result(RESULT);
+		[!? check(DOCTORNICKNAME,PATIENTNICKNAME)] println(doooooocccIdPaaaaaaaaaaatid(DOCTORNICKNAME,PATIENTNICKNAME));
+		[!? check_result(RESULT)] println(resultttttttttttttttttttttttttttttttttttttt(RESULT));
+		removeRule check(_,_)
+	]
+	
+	Plan findDoctors resumeLastPlan [
+		println(" --- [M] finding doctors associated with the patient --- ");
+		onMsg doctors_associate_with_patient : doctors_associate_with_patient(PATIENTNICKNAME) -> addRule findDoctors(PATIENTNICKNAME);
+		[!? doctors(DOCTORS)] forward qdc_notification_manager -m doctors_associate_with_patient_response : doctors_associate_with_patient_response(DOCTORS);
+		[!? doctors(DOCTORS)] println(dottoriassociatiiiiiiiiiiiiii(DOCTORS));
+		removeRule findDoctors(_)
+	]
+
+}
+
+QActor qdc_register context ctx_data_centre {
+	
+	Rules {
+		//TODO
+		registered("a","p").
+		registered("b","p").
+		registered("c","d").
+		registered("d","d").
+		
+		already_registered :- try_registration(NICKNAME,_), registered(NICKNAME,_).
+		
+		registration_approved(NICKNAME,ROLE) :- registration, try_registration(NICKNAME,ROLE).
+		
+		can_login :- try_login(NICKNAME,ROLE), registered(NICKNAME,ROLE).
+	}
+	
+	Plan init normal [
+		println(" --- [DCR] initializing --- ");
+		actorOp createGUI
+	] switchTo waitRegistrationOrChecks
+	
+	Plan waitRegistrationOrChecks [
+		println(" --- [DCR] waiting registration --- ")
+	] transition stopAfter 86400000
+	  whenMsg registration_gui -> checkAndRegister,
+	  whenMsg check_login -> checkLogin
+	  finally repeatPlan
+	  
+	Plan checkAndRegister resumeLastPlan [
+		println(" --- [DCR] checking registration and register --- ");
+		onMsg registration_gui : registration_gui(NICKNAME,ROLE) -> addRule try_registration(NICKNAME,ROLE);
+		[!? already_registered] actorOp print("This user name is already used. Choose another one!") else addRule registration;
+		[!? registration_approved(NICKNAME,ROLE)] demo asserta(registered(NICKNAME,ROLE));
+		[?? registration] actorOp print("Registration complete!");
+		removeRule try_registration(_,_)
+	]
+	
+	Plan checkLogin resumeLastPlan [
+		println(" --- [DCR] checking login --- ");
+		onMsg check_login : check_login(NICKNAME,ROLE) -> addRule try_login(NICKNAME,ROLE);
+		actorOp memoCurentCaller;
+		[!? can_login] replyToCaller -m login_result : login_result("Login ok") 
+				  else replyToCaller -m login_result : login_result("Can not login. You are not register");
+		removeRule try_login(_,_)
+	]
+	
+}
+
+QActor qdc_nickname_id_handler context ctx_data_centre {
+	
+	Rules {
+		getting_ID(ACTORID) :- user_nickname(USERNICKNAME), association(USERNICKNAME,ACTORID).
+	}
+	
+	Plan init normal [
+		println(" --- [DCNIH] initializing --- ")
+	] switchTo waitAssociationAndRequest
+	
+	Plan waitAssociationAndRequest [
+		println(" --- [DCNIH] waiting association --- ")
+	] transition stopAfter 86400000
+	  whenMsg nickname_id_association -> makeAssociation,
+	  whenMsg id_request -> findID
+	  finally repeatPlan
+	  
+	Plan makeAssociation resumeLastPlan [
+		println(" --- [DCNIH] making association --- ");
+		onMsg nickname_id_association : nickname_id_association(USERNICKNAME,ACTORID) -> demo asserta(association(USERNICKNAME,ACTORID))
+	]
+	
+	Plan findID resumeLastPlan [
+		println(" --- [DCNIH] finding ID --- ");
+		onMsg id_request : id_request(USERNICKNAME) -> addRule user_nickname(USERNICKNAME);
+		[!? getting_ID(ACTORID)] forward qdc_notification_manager -m id_response : id_response(ACTORID);
+//		[!? getting_ID(ACTORID)] println(id_nickname_handleeeeeeeeeeeeeeeeeeeeeeeeeeeeeeerrrrrrrr(ACTORID));
+		removeRule user_nickname(_)
+	]
+	
+}
+
+QActor qdc_data_collector context ctx_data_centre {
+	
+	Rules {
+		clinical_history_and_actor_to_reply_to(HISTORY,ACTORNAME) :- request_from(PATIENTNICKNAME,ACTOR,ACTORID),
+											   						 findall(parameter(PARAMETER), parameter(PATIENTNICKNAME,ACTORID,PARAMETER),HISTORY),
+											   						 text_term(ID,ACTORID),
+									       	   						 text_concat(ACTOR,ID,ACTORNAME),!.
+									       	   						 
+		answer_and_actor_to_reply_to("You are not associated with this patient",ACTORNAME) :- check_result("no"),
+																							  check(DOCTORNICKNAME,PATIENTNICKNAME,ACTOR,ACTORID),
+											   			  									  text_term(ID,ACTORID),
+									       	   			  									  text_concat(ACTOR,ID,ACTORNAME),!.
+		
+		answer_and_actor_to_reply_to(HISTORY,ACTORNAME) :- check(DOCTORNICKNAME,PATIENTNICKNAME,ACTOR,ACTORID),
+											   			   findall(parameter(PARAMETER), parameter(PATIENTNICKNAME,_,PARAMETER),HISTORY),
+											   			   text_term(ID,ACTORID),
+									       	   			   text_concat(ACTOR,ID,ACTORNAME),!.
+	}
+	
+	Plan init normal [
+		println(" --- [DCDC] initializing --- ")
+	] switchTo waitParametersToRecordOrClinicalHistoryRequest
+	
+	Plan waitParametersToRecordOrClinicalHistoryRequest [
+		println(" --- [DCDC] waiting parameters to record or clinical history request --- ")
+	] transition stopAfter 86400000
+	  whenMsg recorded_parameter -> recordParameter,
+	  whenMsg clinical_history_request -> handlePatientClinicalHistoryRequest,
+	  whenMsg clinical_history_request_from_doctor -> handleDoctorClinicalHistoryRequest
+	  finally repeatPlan
+	  
+	Plan recordParameter [
+		println(" --- [DCDC] recording parameters --- ");
+		onMsg recorded_parameter: recorded_parameter(NICKNAME,ACTORID,PARAMETER) -> demo asserta(parameter(NICKNAME,ACTORID,PARAMETER))
+//		[!? parameter(NICKNAME,ACTORID,PARAMETER)] println(parametroDaSalvare(NICKNAME,ACTORID,PARAMETER))
+	] switchTo sendDataToAnalyser
+	
+	Plan sendDataToAnalyser [
+		println(" --- [DCDC] sending data to the analyser --- ");
+		[!? parameter(PATIENTNICKNAME,ACTORID,PARAMETER)] forward qdc_data_analyser -m analyse_parameter: analyse_parameter(PATIENTNICKNAME,ACTORID,PARAMETER)
+	] switchTo waitParametersToRecordOrClinicalHistoryRequest
+	
+	Plan handlePatientClinicalHistoryRequest resumeLastPlan [
+		println(" --- [DCDC] handling clinical history request --- ");
+		onMsg clinical_history_request : clinical_history_request(PATIENTNICKNAME,ACTORID) ->  addRule request_from(PATIENTNICKNAME,'qpatient_data_retriever',ACTORID);
+		[!? clinical_history_and_actor_to_reply_to(HISTORY,ACTORNAME)] 
+				sendto ACTORNAME in ctx_patient -m clinical_history_response : clinical_history_response(HISTORY);
+		removeRule request_from(_,_,_)
+	]
+	
+	Plan handleDoctorClinicalHistoryRequest [
+		println(" --- [DCDC] handling clinical history request from doctor --- ");
+		onMsg clinical_history_request_from_doctor : clinical_history_request_from_doctor(DOCTORNICKNAME,PATIENTNICKNAME,ACTORID) 
+					-> addRule check(DOCTORNICKNAME,PATIENTNICKNAME,'qdoctor_data_retriever',ACTORID);
+		printCurrentMessage;
+		[!? check(DOCTORNICKNAME,PATIENTNICKNAME,_,_)] forward qmanager -m check_patient_doctor_association : check_patient_doctor_association(DOCTORNICKNAME,PATIENTNICKNAME);
+		[!? check(DOCTORNICKNAME,PATIENTNICKNAME,_,_)] println(nicknamePazienteACuiChiedoLaListaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(PATIENTNICKNAME))  
+	] switchTo waitCheckResult
+	
+	Plan waitCheckResult [
+		println(" --- [DCDC] waiting the result of the association between that doctor and that patient --- ")
+	] transition stopAfter 86400000
+	  whenMsg check_patient_doctor_association_result -> handleCheckResult
+	  finally repeatPlan
+	  
+	Plan handleCheckResult [
+		println(" --- [DCDC] handling the result of the association between that doctor and that patient --- ");
+		onMsg check_patient_doctor_association_result: check_patient_doctor_association_result(RESULT) -> addRule check_result(RESULT);
+		[!? check_result(RESULT)] println(resuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuult(RESULT));
+		[!? answer_and_actor_to_reply_to(ANSWER,ACTORNAME)] sendto ACTORNAME in ctx_doctor -m clinical_history_response : clinical_history_response(ANSWER);
+		[!? answer_and_actor_to_reply_to(ANSWER,ACTORNAME)] println(answeeeeeeeeeeeeeeeeeeeeeeeeeeeeerrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr(ANSWER,ACTORNAME));
+		removeRule check(_,_,_,_);
+		removeRule check_result(_)
+	] switchTo waitParametersToRecordOrClinicalHistoryRequest
+		
+}
+
+QActor qdc_data_analyser context ctx_data_centre {
+	
+	Rules {		
+		analysis(PATIENTNICKNAME,ACTORID,"febbre") :- patient_and_parameter(PATIENTNICKNAME,ACTORID,PARAMETER), eval(gt,PARAMETER,37),!.
+		analysis(PATIENTNICKNAME,ACTORID,"non febbre") :- patient_and_parameter(PATIENTNICKNAME,ACTORID,_),!.
+	}
+	
+	Plan init normal [
+		println(" --- [DCDA] initializing --- ")
+	] switchTo waitParametersToAnalyse
+	
+	Plan waitParametersToAnalyse [
+		println(" --- [DCDA] waiting parameters to analyse --- ")
+	] transition stopAfter 86400000
+	  whenMsg analyse_parameter -> analyseParameter
+	  finally repeatPlan
+	  
+	Plan analyseParameter resumeLastPlan [
+		println(" --- [DCDA] analysing parameters --- ");
+	  	onMsg analyse_parameter: analyse_parameter(PATIENTNICKNAME,ACTORID,PARAMETER) -> addRule patient_and_parameter(PATIENTNICKNAME,ACTORID,PARAMETER);
+	  	[!? analysis(PATIENTNICKNAME,ACTORID,RESULT)] forward qdc_notification_manager -m analysis_result : analysis_result(PATIENTNICKNAME,ACTORID,RESULT);
+//	  	[!? analysis(PATIENTNICKNAME,ACTORID,RESULT)] println(analyserrrrrrrrrrrrrrrr(PATIENTNICKNAME,ACTORID,RESULT));
+	  	removeRule patient_and_parameter(_,_,_)
+	]
+
+}
+
+QActor qdc_notification_manager context ctx_data_centre {
+	
+	Rules {
+		analysis_and_actor_to_reply_to(RESULT,ACTORNAME) :- analysis_result(_,ACTOR,ACTORID,RESULT),
+											   				  text_term(ID,ACTORID),
+									       	   				  text_concat(ACTOR,ID,ACTORNAME),!.
+									       	   				  
+		send_to_doctors(PATIENTNICKNAME,"ok") :- analysis_result(PATIENTNICKNAME,_,_,"febbre"), !.
+		send_to_doctors(_, "no") :- !.
+		
+		notification_to_doctor(ACTOR,ACTORNAME,RESULT,PATIENTNICKNAME) :- analysis_result(PATIENTNICKNAME,_,_,RESULT),
+																		  doctor_ID(DOCTORID),
+									     								  text_term(ID,DOCTORID),
+									     								  text_concat(ACTOR,ID,ACTORNAME),!.
+		
+		result("ok",PATIENTNICKNAME) :- association_result("ok"),
+							 		    advice_to_send(PATIENTNICKNAME,_,_,_).
+		
+		result("no",ACTORNAME) :- association_result("no"),
+							 		    advice_to_send(PATIENTNICKNAME,_,_,DOCTORACTORID),
+							 		    text_term(ID,DOCTORACTORID),
+									    text_concat('qdoctor_advice_sender',ID,ACTORNAME),!.
+		
+		send_advice_to_patient(ACTOR,ACTORNAME,ADVICE,DOCTORNICKNAME) :- advice_to_send(PATIENTNICKNAME,ADVICE,DOCTORNICKNAME,DOCTORACTORID),
+																		 patient_ID(PATIENTID), 
+																		 text_term(ID,PATIENTID),
+																		 text_concat(ACTOR,ID,ACTORNAME),!.
+	}
+	
+	Plan init normal [
+		println(" --- [DCNM] initializing --- ")
+	] switchTo waitParametersToSend
+	
+	Plan waitParametersToSend [
+		println(" --- [DCNM] waiting parameters to send --- ")
+	] transition stopAfter 86400000
+	  whenMsg analysis_result -> handleAnalysis,
+	  whenMsg advice_to_send -> handleAdvice
+	  finally repeatPlan
+	  
+	Plan handleAnalysis [
+		println(" --- [DCNM] handling analysis --- ");
+		removeRule analysis_result(_,_,_,_);
+	  	onMsg analysis_result : analysis_result(PATIENTNICKNAME,ACTORID,RESULT) -> addRule analysis_result(PATIENTNICKNAME,'qpatient_notification_receiver',ACTORID,RESULT);
+	  	[!? analysis_and_actor_to_reply_to(ANALYSIS,ACTORNAME)] sendto ACTORNAME in ctx_patient -m analysis_notification : analysis_notification(ANALYSIS);
+	  	[!? send_to_doctors(PATIENTNICKNAME,"ok")] forward qmanager -m doctors_associate_with_patient : doctors_associate_with_patient(PATIENTNICKNAME);
+	  	[!? send_to_doctors(PATIENTNICKNAME,"ok")] forward qdc_notification_manager -m go_on : go_on else forward qdc_notification_manager -m restart : restart
+	] transition stopAfter 86400000
+	  whenMsg go_on -> waitDoctorsAssociate,
+	  whenMsg restart -> waitParametersToSend
+	
+	Plan waitDoctorsAssociate [
+		println(" --- [DCNM] waiting doctors associate to the patient --- ")
+	] transition stopAfter 86400000
+	  whenMsg doctors_associate_with_patient_response -> findDoctorsID
+	  finally repeatPlan
+	  
+	Plan findDoctorsID [
+		println(" --- [DCNM] finding ID of doctors' actors--- ");
+//		[!? doctor(DOC)] println(dottoriRimastiInDCNotificationManager(DOC));
+//		removeRule doctor(_);
+		onMsg doctors_associate_with_patient_response : doctors_associate_with_patient_response(DOCTORS) -> actorOp getDoctors(DOCTORS)
+	] switchTo requestDoctorId
+	
+	Plan requestDoctorId [
+		println(" --- [NM] requesting Doctor ID --- ");
+		[!? doctor(DOCTORNICKNAME)] forward qdc_nickname_id_handler -m id_request : id_request(DOCTORNICKNAME)
+//		[!? doctor(DOCTORNICKNAME)] println(doctoooooooooooooooooooooornickname(DOCTORNICKNAME))
+	] switchTo waitDoctorID
+	
+	Plan waitDoctorID [
+		println(" --- [DCNM] waiting doctor ID --- ")
+	] transition stopAfter 86400000
+	  whenMsg id_response -> sendNotificationToDoctor
+	  finally repeatPlan
+	  
+	Plan sendNotificationToDoctor [
+		println(" --- [DCNM] sending notification to doctor --- ");
+		onMsg id_response : id_response(DOCTORID) -> addRule doctor_ID(DOCTORID);
+//		[!? doctor_ID(DOCTORID)] println(doctoooooooooooooooooooooorIdddddddddddddddd(DOCTORID));
+		[!? notification_to_doctor('qdoctor_notification_receiver',ACTORNAME,RESULT,PATIENTNICKNAME)] sendto ACTORNAME in ctx_doctor -m analysis_notification_of_patient : analysis_notification_of_patient(RESULT,PATIENTNICKNAME);
+//		[!? notification_to_doctor('qdoctor_notification_receiver',ACTORNAME,RESULT,PATIENTNICKNAME)] println(attoreeeeeeeeeeeeacuiiiiiiiiiiiiiiimandooooooooooooooooooomessaggioooooooooooooooo(ACTORNAME));
+		removeRule doctor_ID(_);
+		removeRule doctor(_);
+		[!? doctor(_)] forward qdc_notification_manager -m repeat : repeat else forward qdc_notification_manager -m finish : finish
+	] transition stopAfter 86400000
+	  whenMsg repeat -> requestDoctorId,
+	  whenMsg finish -> waitParametersToSend
+
+	Plan handleAdvice resumeLastPlan [
+		println(" --- [DCNM] handling advice --- ");
+	  	onMsg advice_to_send : advice_to_send(PATIENTNICKNAME,ADVICE,DOCTORNICKNAME,DOCTORACTORID) 
+	  			-> addRule advice_to_send(PATIENTNICKNAME,ADVICE,DOCTORNICKNAME,DOCTORACTORID);
+	  	[!? advice_to_send(PATIENTNICKNAME,ADVICE,DOCTORNICKNAME,DOCTORACTORID)] 
+	  			forward qmanager -m check_patient_doctor_association : check_patient_doctor_association(DOCTORNICKNAME,PATIENTNICKNAME)
+	] switchTo waitAssociationResult
+	
+	Plan waitAssociationResult [
+		println(" --- [DCNM] waiting association result --- ")
+	] transition stopAfter 86400000
+	  whenMsg check_patient_doctor_association_result -> checkResult
+	  finally repeatPlan
+	  
+	Plan checkResult [
+		println(" --- [DCNM] finding ID of doctors' actors--- ");
+		removeRule association_result(_);
+		onMsg check_patient_doctor_association_result : check_patient_doctor_association_result(RESULT) -> addRule association_result(RESULT);
+		[!? result("no",NAME)] sendto NAME in ctx_doctor -m advice_to_send_result : advice_to_send_result("This patient is not associate with you");
+		[!? result("no",NAME)] removeRule advice_to_send(_,_,_,_);
+		[!? result("ok",NAME)] forward qdc_nickname_id_handler -m id_request : id_request(NAME);
+		[!? result("ok",NAME)] forward qdc_notification_manager -m go_on : go_on else forward qdc_notification_manager -m restart : restart
+	] transition stopAfter 86400000
+	  whenMsg go_on -> waitPatientID,
+	  whenMsg restart -> waitParametersToSend
+	
+	Plan waitPatientID [
+		println(" --- [DCNM] waiting patient ID --- ")
+	] transition stopAfter 86400000
+	  whenMsg id_response -> sendAdviceToPatient
+	  finally repeatPlan
+	  
+	Plan sendAdviceToPatient [
+		println(" --- [DCNM] sending advice to patient --- ");
+		onMsg id_response : id_response(PATIENTID) -> addRule patient_ID(PATIENTID);
+		[!? patient_ID(PATIENTID)] println(patientiddddddddddddddddddddddddddddddddddddddddddddddddddd(PATIENTID));
+		[!? send_advice_to_patient('qpatient_notification_receiver',ACTORNAME,ADVICE,DOCTORNICKNAME)] 
+					sendto ACTORNAME in ctx_patient -m doctor_advice : doctor_advice(ADVICE,DOCTORNICKNAME);
+		removeRule patient_ID(_);
+		removeRule advice_to_send(_,_,_,_)
+	] switchTo waitParametersToSend
+	
+
+}
 
 QActor qpatient_login context ctx_patient {
 	
@@ -47,501 +479,213 @@ QActor qpatient_login context ctx_patient {
  			text_concat(ProtS,N1S,Name),
 			replaceRule(instance(_,_,_),
 			instance(Prot,N1,Name)).
-			
-	 	id_and_nickname(ID,NICKNAME) :- nickname(NICKNAME), value(_,ID).
+	
+		patient_nickname_and_id(NICKNAME,ID) :- patient_nickname(NICKNAME), value(_,ID), !.
 	}
 	
 	Plan init normal [
 		println(" --- [PL] initializing --- ");
-		actorOp createGUI	
-	] switchTo waitResponse
+		actorOp createGUI
+	] switchTo waitLogin
 	
-	Plan waitResponse [
-		println(" --- [PL] waiting response --- ")
+	Plan waitLogin [
+		println(" --- [PL] waiting login --- ")
 	] transition stopAfter 86400000
-	  whenMsg login_response -> loginResponse
+	  whenMsg login_patient_gui -> chekLogin
 	  finally repeatPlan
 	  
-	Plan loginResponse [
-		println(" --- [PL] login response --- ");
-		removeRule login(_);
-		onMsg login_response : login_response(NICKNAME,DESCRIPTION) -> addRule login(NICKNAME,DESCRIPTION);
-		[!? login(_,DESCRIPTION)] actorOp print(DESCRIPTION);
-		[!? login(NICKNAME,"Login ok")] addRule nickname(NICKNAME);
-		[!? login(_,"Login ok")] switchTo createActors;
-		removeRule login(_,_)
-	] switchTo waitResponse
+	Plan chekLogin [
+		println(" --- [PL] waiting login --- ");
+		onMsg login_patient_gui : login_patient_gui(NICKNAME) -> demo asserta(patient_nickname(NICKNAME)); 
+		[!? patient_nickname(NICKNAME)] forward qdc_register -m check_login : check_login(NICKNAME,"p")
+	] switchTo waitLoginResult
+	
+	Plan waitLoginResult [
+		println(" --- [PL] waiting login result --- ")
+	] transition stopAfter 86400000
+	  whenMsg login_result -> handleLoginResult
+	  finally repeatPlan
+	  
+	Plan handleLoginResult [
+		println(" --- [PL] handling login result--- ");
+		onMsg login_result : login_result(RESULT) -> addRule login_result(RESULT);  
+		[!? login_result(RESULT)] actorOp print(RESULT);
+		[!? login_result("Can not login. You are not register")] removeRule patient_nickname(_);
+		[!? login_result("Login ok")] forward qpatient_login -m go_on : go_on else forward qpatient_login -m restart : restart;
+		removeRule login_result(_)
+	] transition stopAfter 86400000
+	  whenMsg go_on -> createActors,
+	  whenMsg restart -> waitLogin
 	
 	Plan createActors [
 		println(" --- [PL] creating actors --- ");
-		[!? newName(qpatient_sender, Name, N)] demo createActor(Name, 'it.unibo.qpatient_sender.Qpatient_sender');
+		[!? newName(qpatient_data_sender, Name, N)] demo createActor(Name, 'it.unibo.qpatient_data_sender.Qpatient_data_sender');
 		[!? myNewName(qpatient_data_retriever, Name, N)] demo createActor(Name, 'it.unibo.qpatient_data_retriever.Qpatient_data_retriever');
-		[!? myNewName(qpatient_notification_receiver, Name, N)] demo createActor(Name, 'it.unibo.qpatient_notification_receiver.Qpatient_notification_receiver')
-	] switchTo registerPatients
+		[!? myNewName(qpatient_notification_receiver, Name, N)] demo createActor(Name, 'it.unibo.qpatient_notification_receiver.Qpatient_notification_receiver');
+		delay 3000;
+		[!? patient_nickname_and_id(NICKNAME,ID)] forward qdc_nickname_id_handler -m nickname_id_association : nickname_id_association(NICKNAME,ID);
+		[!? patient_nickname_and_id(NICKNAME,ID)] forward qpatient_initializing -m nickname_and_id : nickname_and_id(NICKNAME,ID);
+		removeRule patient_nickname(_)
+	] switchTo waitLogin
 	
-	Plan registerPatients [
-		println(" --- [PL] creating actors --- ");
-//		actorOp getNickname;
-//		[?? actorOpDone(OP,R)] addRule nickname(R);
-		//[!? nickname(R)]  actorOp print(nick(R));
-		[!? id_and_nickname(ID,NICKNAME)] actorOp print(nicknameAndIDdelPazienteLoggato(ID,NICKNAME)); 
-		[!? id_and_nickname(ID,NICKNAME)] forward qmanager_patients_name -m register_nickname : register_nickname(ID,NICKNAME);
-		removeRule nickname(NICKNAME)
-	] switchTo waitResponse
 }
 
-QActor qpatient_sender context ctx_patient_model {
-	/*
+QActor qpatient_initializing context ctx_patient_init {
+	
+	Rules {
+		nickname_and_actor(ACTOR,NICKNAME,ACTORNAME) :- nickname_and_id(NICKNAME,ID),
+												  	    text_term(ACTORID,ID),
+									       	   	        text_concat(ACTOR,ACTORID,ACTORNAME),!.
+	}
+	
 	Plan init normal [
-		println(" --- [PS] initializing --- ")	
-	] switchTo waitLogin
-	*/
-	Plan init normal[
-		println(" --- [PS] initializing --- ")
+		println(" --- [PI] initializing --- ")
+	] switchTo waitNickname
+	
+	Plan waitNickname [
+		println(" --- [PI] waiting my nickname --- ")
+	] transition stopAfter 86400000
+	  whenMsg nickname_and_id -> registerAndSendNickname
+	  finally repeatPlan
+	
+	Plan registerAndSendNickname [
+		println(" --- [PI] registering my nickname --- ");
+		onMsg nickname_and_id : nickname_and_id(NICKNAME,ID) -> addRule nickname_and_id(NICKNAME,ID);
+		printCurrentMessage;
+		//[!? nickname_and_id(NICKNAME,_)] println(my_nickname(NICKNAME));
+		[!? nickname_and_actor('qpatient_data_sender',NICKNAME,ACTORNAME)] sendto ACTORNAME in ctx_patient -m my_nickname : my_nickname(NICKNAME);
+//		[!? nickname_and_actor('qpatient_data_sender',NICKNAME,ACTORNAME)] println(nameeeeeeeeeeeeeeeeeeeeeeeeeeeee(ACTORNAME));
+		[!? nickname_and_actor('qpatient_data_retriever',NICKNAME,ACTORNAME)] sendto ACTORNAME in ctx_patient -m my_nickname : my_nickname(NICKNAME);
+		[!? nickname_and_actor('qpatient_notification_receiver',NICKNAME,ACTORNAME)] sendto ACTORNAME in ctx_patient -m my_nickname : my_nickname(NICKNAME);
+		removeRule nickname_and_id(_,_)
+	] switchTo waitNickname
+	
+}
+
+QActor qpatient_data_sender context ctx_patient_model {
+	
+	Rules {
+		my_id_and_nickname(PATIENTNICKNAME,ACTORID) :- my_nickname(PATIENTNICKNAME), my_actor_id(ACTORID). 
+	}
+	
+	Plan init normal [
+		println(" --- [PDS] initializing --- ");
+		[!? actorobj(ID)] actorOp getId(ID);
+		[?? actorOpDone(OP,R)] addRule my_actor_id(R)
+	] switchTo waitMyNickname
+	
+	Plan waitMyNickname [
+		println(" --- [PDS] waiting my nickname --- ")
+	] transition stopAfter 86400000
+	  whenMsg my_nickname -> registerMyNickname
+	  finally repeatPlan
+	
+	Plan registerMyNickname [
+		println(" --- [PDS] registering my nickname --- ");
+		onMsg my_nickname : my_nickname(NICKNAME) -> addRule my_nickname(NICKNAME);
+		[!? my_nickname(NICKNAME)] println(my_nickname(NICKNAME))
 	] switchTo sendData
 	
 	Plan sendData [
-		println(" --- [PS] sending data --- ");
-		[!? actorobj(ID)] actorOp getId(ID);
-		[?? actorOpDone(OP,R)] forward qdc_data_receiver -m sending_patient_parameter : sending_patient_parameter(R,37,"12/12/12");
-		delay 15000;
-		[!? actorobj(ID)] actorOp getId(ID);
-		[?? actorOpDone(OP,R)] forward qdc_data_receiver -m sending_patient_parameter : sending_patient_parameter(R,38,"12/12/12");
-		delay 15000;
-		[!? actorobj(ID)] actorOp getId(ID);
-		[?? actorOpDone(OP,R)] forward qdc_data_receiver -m sending_patient_parameter : sending_patient_parameter(R,39,"12/12/12");
-		delay 15000
+		println(" --- [PDS] sending parameters --- ");
+		delay 2000;
+		[!? my_id_and_nickname(PATIENTNICKNAME,ACTORID)] forward qdc_data_collector -m recorded_parameter: recorded_parameter(PATIENTNICKNAME,ACTORID,38);
+		delay 2000;
+		[!? my_id_and_nickname(PATIENTNICKNAME,ACTORID)] forward qdc_data_collector -m recorded_parameter: recorded_parameter(PATIENTNICKNAME,ACTORID,38);
+		delay 2000;
+		[!? my_id_and_nickname(PATIENTNICKNAME,ACTORID)] forward qdc_data_collector -m recorded_parameter: recorded_parameter(PATIENTNICKNAME,ACTORID,38);
+		delay 2000;
+		[!? my_id_and_nickname(PATIENTNICKNAME,ACTORID)] forward qdc_data_collector -m recorded_parameter: recorded_parameter(PATIENTNICKNAME,ACTORID,39)
 	] finally repeatPlan
 	
 }
 
 QActor qpatient_data_retriever context ctx_patient_model {
 	
-	Rules{
-		check_myid(ID) :- myID(ID), received(I), check(ID,I).
-		check(I,I).
-		
-		check_and_get_name(NAME) :- check_myid(_),
-							        get_name(NAME).
-							        
-		get_name(NAME) :- myID(ID),
-						  text_term(I,ID),
-						  text_concat('qpatient_data_retriever',I,NAME), !.		        
-							        
-		check_not_equal(NAME) :-  myID(ID), received(I),eval(lt,I,ID),get_name(NAME).
-		check_not_equal(NAME) :-  myID(ID), received(I),eval(gt,I,ID),get_name(NAME).
+	Rules {
+		my_id_and_nickname(PATIENTNICKNAME,ACTORID) :- my_nickname(PATIENTNICKNAME), my_actor_id(ACTORID). 
 	}
-	/*
-	Plan waitLogin normal[
-		println(" --- [PR] waiting login --- ")
-	] transition stopAfter 86400000
-	  whenEvent patient_login -> init
-	  finally repeatPlan
-	*/  
+	
 	Plan init normal [
-		actorOp print(" --- [PR] initializing --- ");
+		println(" --- [PDR] initializing --- ");
 		actorOp createGUI;
 		[!? actorobj(ID)] actorOp getId(ID);
-		[?? actorOpDone(OP,R)] addRule myID(R)
-		//[!? myID(ID)] actorOp print(primo(ID))
-	] switchTo waitUserRequest
-	  
-	Plan waitUserRequest [
-		actorOp print(" --- [PR] waiting for user request --- ")
+		[?? actorOpDone(OP,R)] addRule my_actor_id(R)
+	] switchTo waitMyNickname
+	
+	Plan waitMyNickname [
+		println(" --- [PDR] waiting my nickname --- ")
 	] transition stopAfter 86400000
-	  whenEvent patient_data_request -> requestData
+	  whenMsg my_nickname -> registerMyNickname
 	  finally repeatPlan
 	
-	Plan requestData [
-		actorOp print(" --- [PR] requesting data --- ");
-		onEvent patient_data_request : patient_data_request(I) -> addRule received(I);
-		//[!? received(ID)] actorOp print(secondo(ID));
-		//printCurrentEvent;
-		//[!? check_myid(ID)] actorOp print(ciao(ID));
-		[!? check_myid(ID)] forward qdc_data_receiver -m patient_parameters_request : patient_parameters_request(ID); 
-		[!? check_and_get_name(NAME)] forward NAME -m success : success; 
-		[!? check_not_equal(NAME)] forward NAME -m failure : failure;
-		removeRule received(I)
-	] transition stopAfter 30000
-	  whenMsg success -> waitResponse,
-	  whenMsg failure -> waitUserRequest
-	  finally repeatPlan
+	Plan registerMyNickname [
+		println(" --- [PDR] registering my nickname --- ");
+		onMsg my_nickname : my_nickname(NICKNAME) -> addRule my_nickname(NICKNAME);
+		[!? my_nickname(NICKNAME)] actorOp print(my_nickname(NICKNAME))
+	] switchTo waitUserDataRequest
 	
-	Plan waitResponse resumeLastPlan [
-		actorOp print(" --- [PR] waiting for a response --- ")
-	] transition stopAfter 600000
-	  whenMsg patient_parameters_response -> visualiseData
+	Plan waitUserDataRequest [
+		println(" --- [PDR] waiting patient data request --- ")
+	] transition stopAfter 86400000
+	  whenMsg patient_data_request_gui -> handleDataRequest
+	  finally repeatPlan
 	  
-	Plan visualiseData [
-		actorOp print(" --- [PR] visualizing data --- ");
-		onMsg patient_parameters_response : patient_parameters_response(LIST) -> actorOp print(LIST)
-	] switchTo waitUserRequest
+	Plan handleDataRequest [
+		println(" --- [PDR] handling patient data request --- ");
+		[!? my_id_and_nickname(PATIENTNICKNAME,ACTORID)] forward qdc_data_collector -m clinical_history_request : clinical_history_request(PATIENTNICKNAME,ACTORID);
+		[!? my_id_and_nickname(PATIENTNICKNAME,ACTORID)] actorOp print(my_id_and_nickname(PATIENTNICKNAME,ACTORID))
+	] switchTo waitClinicalHistory
+	
+	Plan waitClinicalHistory [
+		println(" --- [PDR] waiting patient clinical history --- ")
+	] transition stopAfter 86400000
+	  whenMsg clinical_history_response -> handleClinicalHistoryResponse
+	  finally repeatPlan
+	  
+	Plan handleClinicalHistoryResponse [
+		println(" --- [PDR] handling patient data request --- ");
+		onMsg clinical_history_response : clinical_history_response(HISTORY) -> actorOp print(HISTORY)
+	] switchTo waitUserDataRequest
+	
 }
 
 QActor qpatient_notification_receiver context ctx_patient_model {
-	/*
-	Plan waitLogin normal[
-		println(" --- [PNR] waiting login --- ")
-	] transition stopAfter 86400000
-	  whenEvent patient_login -> init
-	  finally repeatPlan
-	*/  
+	
 	Plan init normal [
 		println(" --- [PNR] initializing --- ");
 		actorOp createGUI
+	] switchTo waitMyNickname
+	
+	Plan waitMyNickname [
+		println(" --- [PNR] waiting my nickname --- ")
+	] transition stopAfter 86400000
+	  whenMsg my_nickname -> registerMyNickname
+	  finally repeatPlan
+	
+	Plan registerMyNickname [
+		println(" --- [PNR] registering my nickname --- ");
+		onMsg my_nickname : my_nickname(NICKNAME) -> addRule my_nickname(NICKNAME);
+		[!? my_nickname(NICKNAME)] actorOp print(my_nickname(NICKNAME))
 	] switchTo waitNotification
 	
 	Plan waitNotification [
-		actorOp print(" --- [PNR] waiting notification --- ")
+		println(" --- [PNR] waiting notification --- ")
 	] transition stopAfter 86400000
-	  whenMsg notification -> visualizeNotification
+	  whenMsg analysis_notification -> handleNotification,
+	  whenMsg doctor_advice -> handleAdvice
 	  finally repeatPlan
-	  
-	Plan visualizeNotification resumeLastPlan [
-		actorOp print(" --- [PNR] receive notification --- ");
-		onMsg notification : notification(ID, DESCRIPTION) -> actorOp print(DESCRIPTION)
-	]
 	
-}
-
-QActor qdc_data_receiver context ctx_data_centre  {
-	
-	Rules {
-		request_parameters(A,NAME,LIST) :- patient_id(ID),
-									       text_term(I,ID),
-									       text_concat(A,I,NAME),
-									       findall(patient_parameter(ID,X,Y), patient_parameter(ID,X,Y),LIST),
-									       retract(patient_id(ID)),!.
-									   
-		request_parameters_from_doc(A,NAME,LIST,RESP) :- doc_and_pat_id(DOCID,PATID),
-									                     text_term(I,DOCID),
-									                     text_concat(A,I,NAME),
-									                     findall(patient_parameter(PATID,X,Y), patient_parameter(PATID,X,Y),LIST),
-									                     resp(RESP),
-									                     retract(doc_and_pat_id(DOCID,PATID)),
-									                     retract(resp(RESP)),!.					  
-	}
-	
-	Plan init normal [
-		println(" --- [DC] initializing --- ")	
-	] switchTo waitMessages
-	
-	Plan waitMessages [
-		println(" --- [DC] waiting messages --- ")
-	] transition stopAfter 86400000
-	  whenMsg sending_patient_parameter -> saveParameter,
-	  whenMsg patient_parameters_request -> handleRequest,
-	  whenMsg patient_parameters_request_from_doctor -> handleDoctorRequest
-	  finally repeatPlan
-	  
-	Plan saveParameter [
-		println(" --- [DC] saving parameters --- ");
-		onMsg sending_patient_parameter : sending_patient_parameter(ID,PARAMETER,TIMESTAMP) -> demo asserta(patient_parameter(ID,PARAMETER,TIMESTAMP))
-	] switchTo sendToAnalyser
-	
-	Plan sendToAnalyser [
-		println(" --- [DC] sending to analyzer --- ");
-		[!? patient_parameter(ID,PARAMETER, TIMESTAMP)] forward qdc_analyser -m sending_patient_parameter : sending_patient_parameter(ID,PARAMETER, TIMESTAMP) 
-	] switchTo waitMessages
-	
-	Plan handleRequest resumeLastPlan [
-		println(" --- [DC] handling parameters request --- ");
-		//printCurrentMessage;
-		onMsg patient_parameters_request : patient_parameters_request(ID) -> demo asserta(patient_id(ID));
-		//actorOp memoCurrentCaller;
-		//[!? patient_id(ID)] println(ID); 
-		[!? request_parameters('qpatient_data_retriever',NAME,LIST)] sendto NAME in ctx_patient -m patient_parameters_response : patient_parameters_response(LIST)		
-	]
-	
-	Plan handleDoctorRequest resumeLastPlan [
-		println(" --- [DC] handling parameters request from doctor --- ");
-		//TODO patient_parameters_request_from_doctor(ACTORNAME,DOCID,PATID)
-		onMsg patient_parameters_request_from_doctor : patient_parameters_request_from_doctor(DOCID,PATID) -> demo asserta(doc_and_pat_id(DOCID,PATID));
-		//actorOp memoCurrentCaller;
-		//[!? patient_id(ID)] println(ID); 
-		[!? doc_and_pat_id(DOCID,PATID)] forward qmanager_associations -m check_association : check_association(DOCID,PATID)
-	] switchTo waitAssociation
-	
-	Plan waitAssociation [
-		println(" --- [DC] waiting patient and doctor association --- ")
-	] transition stopAfter 86400000
-	  whenMsg check_association_response -> handleResp
-	  finally repeatPlan
-		
-	Plan handleResp [
-		println(" --- [DC] handling association response--- ");
-		onMsg check_association_response : check_association_response(RESP) -> addRule resp(RESP);
-		[!? request_parameters_from_doc('qdoctor_data_retriever',NAME,LIST,"ok")] sendto NAME in ctx_doctor -m patient_parameters_response : patient_parameters_response(LIST);
-		[!? request_parameters_from_doc('qdoctor_data_retriever',NAME,_,"no")] sendto NAME in ctx_doctor -m failure : failure	
-	] switchTo waitMessages
-	
-}
-
-QActor qdc_analyser context ctx_data_centre {
-	
-	Rules {
-		analyser(VAL, febbre) :- eval(gt, VAL, 37),!.
-		analyser(VAL, non_febbre) :- eval(gt, 37, VAL), !.
-		analyser(37, non_febbre).
-		
-		analyse(ID,RESP) :- 
-			parameter(ID,PARAMETER),
-			analyser(PARAMETER, RESP).
-	}
-	
-	Plan init normal [
-		println(" --- [A] initializing --- ")	
-	] switchTo waitParameter
-	
-	Plan waitParameter [
-		println(" --- [A] waiting parameter--- ")
-	] transition stopAfter 86400000
-	  whenMsg sending_patient_parameter -> analyse
-	  finally repeatPlan
-	  
-	Plan analyse resumeLastPlan [
-		println(" --- [A] analyzing parameter--- ");
-		onMsg sending_patient_parameter : sending_patient_parameter(ID,PARAMETER, TIMESTAMP) -> addRule parameter(ID,PARAMETER);
-		[!? analyse(ID,RESP)] println(RESP);
-		[!? analyse(ID,RESP)] forward qdc_notification_manager -m notification : notification(ID,RESP);	
-		[!? analyse(ID,RESP)] removeRule parameter(ID,PARAMETER)
-	]
-	
-}
-
-QActor qdc_notification_manager context ctx_data_centre {
-	
-	Rules {
-		request_name(A,NAME,DESCRIPTION) :- notification(ID,DESCRIPTION),
-									        text_term(I,ID),
-									        text_concat(A,I,NAME),!.
-		
-		//TODO è sbagliato							        
-	/*	request_name_advice(NAME,ADVICE) :- patient(ID),
-											advice(DOCID,NICKNAME,ADVICE),
-									        text_term(I,ID),
-									        text_concat(ACTORNAME,I,NAME),
-									        retract(patient(ID)),!.
-									        * 
-									        */
-									       
-		request_doctor_name(A,NAME,DESCRIPTION) :- doc(ID),
-		                                           notification(_,DESCRIPTION),
-									       		   text_term(I,ID),
-									               text_concat(A,I,NAME),!.
-		
-		send_to_doctor(febbre) :- notification(ID,febbre).
-		
-		send_advice(NAME,ADVICE,RESP) :- advice(DOCID,NICKNAME,ADVICE),
-										 
-									     text_term(I,DOCID),
-									     text_concat('qpatient_notification_receiver',I,NAME),
-									     resp(RESP),!.
-	}
-	
-	Plan init normal [
-		println(" --- [NM] initializing --- ")	
-	] switchTo waitNotification
-	
-	Plan waitNotification [
-		println(" --- [NM] waiting notification --- ");
-		removeRule notification(_,_)
-	] transition stopAfter 86400000
-	  whenMsg notification -> handleNotification,
-	  whenMsg advice -> handleAdvice
-	  finally repeatPlan
-	  
 	Plan handleNotification resumeLastPlan [
-		println(" --- [NM] handling notification --- ");
-		onMsg notification : notification(ID,DESCRIPTION) -> addRule notification(ID,DESCRIPTION);
-		[!? request_name('qpatient_notification_receiver',NAME,DESCRIPTION)] sendto NAME in ctx_patient -m notification : notification(ID,DESCRIPTION);
-		[!? notification(ID,febbre)] forward qmanager_associations -m association : association(ID);
-		[!? notification(_,febbre)] forward qdc_notification_manager -m success : success;
-		[!? notification(_,non_febbre)] forward qdc_notification_manager -m failure : failure 
-		 			
-	] transition stopAfter 30000
-	  whenMsg success -> waitResponse,
-	  whenMsg failure -> waitNotification
+		println(" --- [PNR] handling notification --- ");
+		onMsg analysis_notification : analysis_notification(ANALYSIS) -> actorOp print(analysis(ANALYSIS))
+	]
 	
-	Plan waitResponse [
-		println(" --- [NM] waiting response --- ")
-	] transition stopAfter 120000
-	  whenMsg association_response -> getResponse
-	  finally repeatPlan
-	
-	Plan getResponse [
-		println(" --- [NM] handle response --- ");
-		onMsg association_response : association_response(LIST) -> actorOp getDoctors(LIST)
-	] switchTo sendNotification
-	
-	Plan sendNotification [
-		println(" --- [NM] sending notifications --- ");
-		[!? request_doctor_name('qdoctor_notification_receiver',NAME,DESCRIPTION)] sendto NAME in ctx_doctor -m notification : notification(ID,DESCRIPTION);
-		[?? doc(_)] forward qdc_notification_manager -m repeat : repeat else forward qdc_notification_manager -m finish : finish
-	] transition stopAfter 120000
-	  whenMsg repeat -> sendNotification,
-	  whenMsg finish -> waitNotification
-	  
 	Plan handleAdvice resumeLastPlan [
-		println(" --- [NM] handling advice --- ");
-		onMsg advice : advice(DOCID,NICKNAME,ADVICE) -> addRule advice(DOCID,NICKNAME,ADVICE)//;
-		//TODO request_id(DOCID,NICKNAME)
-		//[!? advice(ACTORNAME,DOCID,NICKNAME,DESCRIPTION)] forward qmanager_patients_name -m request_id : request_id(ACTORNAME,DOCID,NICKNAME)	
-	] switchTo checkAssociation
-	/*
-	Plan waitId [
-		println(" --- [NM] waiting id --- ")
-	] transition stopAfter 120000
-	  whenMsg request_id_response -> checkAssociation
-	  finally repeatPlan
-	  * 
-	  */
-	
-	Plan checkAssociation [
-		println(" --- [NM] check association --- ");
-		onMsg request_id_response : request_id_response(ID) -> addRule patient(ID);
-		[!? advice(DOCID,NICKNAME,DESCRIPTION)] forward qmanager_associations -m check_association : check_association(DOCID,PATID)
-	] switchTo waitCheck
-	
-	Plan waitCheck [
-		println(" --- [NM] waiting association --- ")
-	] transition stopAfter 120000
-	  whenMsg check_association_response -> sendAdvice
-	  finally repeatPlan
-	
-	Plan sendAdvice[
-		println(" --- [NM] sending advice --- ");
-		println(" --- [DC] handling association response--- ");
-		onMsg check_association_response : check_association_response(RESP) -> addRule resp(RESP);
-		[!? send_advice(NAME,ADVICE,"ok")] sendto NAME in ctx_patient -m notification : notification(ID,ADVICE);
-		removeRule advice(_,_,_)
-	] switchTo waitNotification
-	
-}
-
-QActor qdc_user_manager context ctx_data_centre {
-	
-	Rules {
-		alreadyRegistered :- registration(NICKNAME, _), registered(NICKNAME,_).
-		
-		correct_registration :- registration(NICKNAME,TYPE), assert(registered(NICKNAME,TYPE)), retract(registration(_,_)).
-		
-		can_login(NICKNAME,NAME) :- login(NICKNAME,TYPE,NAME), registered(NICKNAME,TYPE), retract(login(_,_,_)).
-	}
-	
-	Plan init normal [
-		println(" --- [UM] initializing --- ");
-		actorOp createGUI
-	] switchTo waitNotification
-	
-	Plan waitNotification [
-		println(" --- [UM] waiting notification --- ")
-	] transition stopAfter 86400000
-	  whenEvent register_request -> registration,
-	  whenEvent login_request -> login
-	  finally repeatPlan
-	  
-	Plan registration resumeLastPlan [
-		println(" --- [UM] registration --- ");
-		onEvent register_request : register_request(NICKNAME, TYPE) -> addRule registration(NICKNAME, TYPE);
-		[!? alreadyRegistered] actorOp print("This user name is already used. Choose another one!");
-		[!? alreadyRegistered] removeRule registration(_,_);
-		[!? correct_registration] actorOp print("Registration complete!")		
+		println(" --- [PNR] handling notification --- ");
+		onMsg doctor_advice : doctor_advice(ADVICE,DOCTORNICKNAME) -> actorOp print(advice(ADVICE,DOCTORNICKNAME))
 	]
 	
-	Plan login resumeLastPlan [
-		println(" --- [UM] login --- ");
-		onEvent login_request : login_request(NICKNAME,TYPE,NAME) -> addRule login(NICKNAME,TYPE,NAME);
-		[!? can_login(NICKNAME,NAME)] forward NAME -m login_response : login_response(NICKNAME,"Login ok");
-		[?? login(NICKNAME,_,NAME)] forward NAME -m login_response : login_response(NICKNAME,"Login failed")
-		
-	]
-	
-}
-
-QActor qmanager_patients_name context ctx_manager {
-	
-	Rules {
-		
-		doc_name(NAME) :- doc_name_id(ACTORNAME,DOCID),
-							text_term(I,DOCID),
-							text_concat(ACTORNAME,I,NAME),!.
-									       
-		req_id_doc_name(ID,NAME) :- nickname(NICKNAME), patient(ID,NICKNAME), doc_name(NAME) .
-		
-	}
-	
-	Plan init normal [
-		println(" --- [MPN] initializing --- ")
-	] switchTo waitRequest
-	
-	Plan waitRequest [
-		println(" --- [MPN] waiting request --- ")
-	] transition stopAfter 86400000
-	  whenMsg register_nickname -> handleRequest,
-	  whenMsg request_id -> handleReqId
-	  finally repeatPlan
-	  
-	Plan handleRequest [
-		println(" --- [MPN] handling request --- ");
-		onMsg register_nickname : register_nickname(ID,NICKNAME) -> demo asserta(patient(ID,NICKNAME));
-		[!? patient(ID,NICKNAME)] println(nicknameAndIDdelPazienteArrivatiAlManager(ID,NICKNAME))
-	] switchTo waitRequest
-	
-	Plan handleReqId [
-		println(" --- [MPN] handling requests for patient's id --- ");
-		onMsg request_id : request_id(_,_, NICKNAME) -> addRule nickname(NICKNAME);
-		onMsg request_id : request_id(ACTORNAME,DOCID, _) -> addRule doc_name_id(ACTORNAME,DOCID);
-		[!? doc_name_id(ACTORNAME,DOCID)] println (dooooooooooooooooooccccccccccccccciddddddddddd(DOCID));
-		[!? doc_name_id(ACTORNAME,DOCID)] println (doooooooooooooooooocccccccccccccccnameeeeeeeeee(ACTORNAME));
-		[!? req_id_doc_name(ID,NAME)] println(nomeattoreacuiinvioooooooooooooooooooooooooooo(NAME));
-		[!? req_id_doc_name(ID,NAME)] println(idddddddddddddddddddddddddddddddddddddd(ID));
-		[!? req_id_doc_name(ID,NAME)] sendto NAME in ctx_doctor -m request_id_response : request_id_response(ID);  
-		removeRule doc_name_id(_,DOCID);
-		removeRule nickname(NICKNAME)
-	] switchTo waitRequest
-}
-
-QActor qmanager_associations context ctx_manager {
-	
-	Rules {
-		//association(DOCID,PATID)
-		association(2,1).
-		association(2,2).
-		
-		get_associations(LIST) :- patient(PATID),findall(doc(X), association(PATID,X),LIST), retract(patient(PATID)),!.
-		
-		check_association("ok") :- check(DOCID,PATID), association(DOCID,PATID),!.
-		check_association("no").
-		
-	}
-	
-	Plan init normal [
-		println(" --- [MA] initializing --- ")	
-	] switchTo waitingRequest
-	
-	Plan waitingRequest [
-		println(" --- [MA] waiting request --- ")
-	] transition stopAfter 86400000
-	  whenMsg association -> handleRequest,
-	  whenMsg check_association -> checkAssociation
-	  finally repeatPlan
-	  
-	Plan handleRequest resumeLastPlan [
-		println(" --- [MA] handling request --- ");
-		onMsg association : association(PATID) -> addRule patient(PATID);
-		actorOp memoCurrentCaller;
-		[!? get_associations(LIST)] replyToCaller -m association_response : association_response(LIST)
-	]
-	
-	Plan checkAssociation resumeLastPlan [
-		println(" --- [MA] chacking association --- ");
-		onMsg check_association : check_association(DOCID,PATID) -> addRule check(DOCID,PATID);
-		actorOp memoCurrentCaller;
-		[!? check_association(RESP)] replyToCaller -m check_association_response : check_association_response(RESP);
-		removeRule check(DOCID,PATID)
-	]
-
 }
 
 QActor qdoctor_login context ctx_doctor {
@@ -554,193 +698,239 @@ QActor qdoctor_login context ctx_doctor {
  			text_concat(ProtS,N1S,Name),
 			replaceRule(instance(_,_,_),
 			instance(Prot,N1,Name)).
+	
+		doctor_nickname_and_id(NICKNAME,ID) :- doctor_nickname(NICKNAME), value(_,ID), !. 
 	}
 	
 	Plan init normal [
 		println(" --- [DL] initializing --- ");
-		actorOp createGUI	
-	] switchTo waitResponse
+		actorOp createGUI
+	] switchTo waitLogin
 	
-	Plan waitResponse [
-		println(" --- [DL] waiting response --- ")
+	Plan waitLogin [
+		println(" --- [DL] waiting login --- ")
 	] transition stopAfter 86400000
-	  whenMsg login_response -> loginResponse
+	  whenMsg login_doctor_gui -> chekLogin
 	  finally repeatPlan
 	  
-	Plan loginResponse [
-		println(" --- [DL] login response --- ");
-		removeRule login(_);
-		onMsg login_response : login_response(NICKNAME,DESCRIPTION) -> addRule login(DESCRIPTION);
-		[!? login(DESCRIPTION)] actorOp print(DESCRIPTION);
-		[?? login("Login ok")] switchTo createActors
-	] switchTo waitResponse
+	Plan chekLogin [
+		actorOp print(" --- [DL] waiting login --- ");
+		onMsg login_doctor_gui : login_doctor_gui(NICKNAME) -> demo asserta(doctor_nickname(NICKNAME)); 
+		[!? doctor_nickname(NICKNAME)] forward qdc_register -m check_login : check_login(NICKNAME,"d")
+	] switchTo waitLoginResult
+	
+	Plan waitLoginResult [
+		actorOp print(" --- [DL] waiting login result --- ")
+	] transition stopAfter 86400000
+	  whenMsg login_result -> handleLoginResult
+	  finally repeatPlan
+	  
+	Plan handleLoginResult [
+		actorOp print(" --- [DL] handling login result--- ");
+		onMsg login_result : login_result(RESULT) -> addRule login_result(RESULT);  
+		[!? login_result(RESULT)] actorOp print(RESULT);
+		[!? login_result("Can not login. You are not register")] removeRule doctor_nickname(_);
+		[!? login_result("Login ok")] forward qdoctor_login -m go_on : go_on else forward qdoctor_login -m restart : restart;
+		removeRule login_result(_)
+	] transition stopAfter 86400000
+	  whenMsg go_on -> createActors,
+	  whenMsg restart -> waitLogin
 	
 	Plan createActors [
+		actorOp print(" --- [DL] creating actors --- ");
 		[!? newName(qdoctor_data_retriever, Name, N)] demo createActor(Name, 'it.unibo.qdoctor_data_retriever.Qdoctor_data_retriever');
 		[!? myNewName(qdoctor_notification_receiver, Name, N)] demo createActor(Name, 'it.unibo.qdoctor_notification_receiver.Qdoctor_notification_receiver');
-		[!? myNewName(qdoctor_notification_sender, Name, N)] demo createActor(Name, 'it.unibo.qdoctor_notification_sender.Qdoctor_notification_sender')
-	] switchTo waitResponse
+		[!? myNewName(qdoctor_advice_sender, Name, N)] demo createActor(Name, 'it.unibo.qdoctor_advice_sender.Qdoctor_advice_sender');
+//		[!? myNewName(qdoctor_advice_result_receiver, Name, N)] demo createActor(Name, 'it.unibo.qdoctor_advice_result_receiver.Qdoctor_advice_result_receiver');
+		delay 3000;
+		[!? doctor_nickname_and_id(NICKNAME,ID)] forward qdc_nickname_id_handler -m nickname_id_association : nickname_id_association(NICKNAME,ID);
+		[!? doctor_nickname_and_id(NICKNAME,ID)] forward qdoctor_initializing -m nickname_and_id : nickname_and_id(NICKNAME,ID);
+		removeRule doctor_nickname(_)
+	] switchTo waitLogin
+	
+}
+
+QActor qdoctor_initializing context ctx_doctor_init {
+	
+	Rules {
+		nickname_and_actor(ACTOR,NICKNAME,ACTORNAME) :- nickname_and_id(NICKNAME,ID),
+												  	    text_term(ACTORID,ID),
+									       	   	        text_concat(ACTOR,ACTORID,ACTORNAME),!.
+	}
+	
+	Plan init normal [
+		println(" --- [DI] initializing --- ")
+	] switchTo waitMyNickname
+	
+	Plan waitMyNickname [
+		println(" --- [DI] waiting my nickname --- ")
+	] transition stopAfter 86400000
+	  whenMsg nickname_and_id -> registerAndSendNickname
+	  finally repeatPlan
+	
+	Plan registerAndSendNickname [
+		println(" --- [DI] registering my nickname --- ");
+		onMsg nickname_and_id : nickname_and_id(NICKNAME,ID) -> addRule nickname_and_id(NICKNAME,ID);
+//		[!? nickname_and_id(NICKNAME,_)] println(my_nickname(NICKNAME));
+		[!? nickname_and_actor('qdoctor_notification_receiver',NICKNAME,ACTORNAME)] sendto ACTORNAME in ctx_doctor -m my_nickname : my_nickname(NICKNAME);
+		[!? nickname_and_actor('qdoctor_data_retriever',NICKNAME,ACTORNAME)] sendto ACTORNAME in ctx_doctor -m my_nickname : my_nickname(NICKNAME);
+		[!? nickname_and_actor('qdoctor_advice_sender',NICKNAME,ACTORNAME)] sendto ACTORNAME in ctx_doctor -m my_nickname : my_nickname(NICKNAME);
+//		[!? nickname_and_actor('qdoctor_advice_result_receiver',NICKNAME,ACTORNAME)] sendto ACTORNAME in ctx_doctor -m my_nickname : my_nickname(NICKNAME);
+		removeRule nickname_and_id(_,_)
+	] switchTo waitMyNickname
+	
 }
 
 QActor qdoctor_data_retriever context ctx_doctor_model {
 	
-	Rules{
-		//check_myid(DOCID) :- myID(DOCID), received(ID,PATNICKNAME), check(DOCID,ID).
-		//check(I,I).
-		
-		my_id_and_patient_id(DOCID,PATID) :- myID(DOCID), my_patient(PATID).
-		
-		my_id_and_pat_nickname(DOCID,PATNICKNAME) :- myID(DOCID), pat_nickname(PATNICKNAME), retract(pat_nickname(_)).
-		
-		check_and_get_name(NAME) :- check_myid(_,_),
-							        get_name(NAME).
-							        
-		get_name(NAME) :- myID(ID),
-						  text_term(I,ID),
-						  text_concat('qdoctor_data_retriever',I,NAME), !.		        
-							       
-		check_not_equal(NAME) :-  myID(ID), received(I),eval(lt,I,ID),get_name(NAME).
-		check_not_equal(NAME) :-  myID(ID), received(I),eval(gt,I,ID),get_name(NAME).
+	Rules {
+		id_and_nickname(DOCTORNICKNAME,ACTORID,PATIENTNICKNAME) :- my_nickname(DOCTORNICKNAME), my_actor_id(ACTORID), patient_nickname(PATIENTNICKNAME). 		
 	}
-	/*
-	Plan waitLogin normal[
-		println(" --- [D] waiting login --- ")
-	] transition stopAfter 86400000
-	  whenEvent doctor_login -> init
-	  finally repeatPlan
-	*/  
+	
 	Plan init normal [
-		println(" --- [D] initializing --- ");
+		actorOp print(" --- [DDR] initializing --- ");
 		actorOp createGUI;
 		[!? actorobj(ID)] actorOp getId(ID);
-		[?? actorOpDone(OP,R)] addRule myID(R);
-		[!? myID(R)] actorOp print(id(R))
-	] switchTo waitUserRequest
+		[?? actorOpDone(OP,R)] addRule my_actor_id(R)
+//		[!? actorobj(ID)] actorOp print(ID);
+//		[!? my_actor_id(R)] actorOp print(id(R))
+	] switchTo waitMyNickname
 	
-	Plan waitUserRequest [
-		actorOp print(" --- [D] waiting for user request --- ")
+	Plan waitMyNickname [
+		actorOp print(" --- [DDR] waiting my nickname --- ")
 	] transition stopAfter 86400000
-	  whenMsg doctor_data_request_gui -> requestPatientId
+	  whenMsg my_nickname -> registerMyNickname
 	  finally repeatPlan
 	
-	Plan requestPatientId [
-		//delay 3000;
-		actorOp print(" --- [D] requesting patient id --- ");
-		onMsg doctor_data_request_gui : doctor_data_request_gui(PATNICKNAME) -> addRule pat_nickname(PATNICKNAME);
-		[!? pat_nickname(PATNICKNAME)] actorOp print(nicknamePazienteDiCuiVoglioSapereLID(PATNICKNAME));
-		[!? my_id_and_pat_nickname(DOCID,PATNICKNAME)] forward qmanager_patients_name -m request_id : request_id('qdoctor_data_retriever',DOCID,PATNICKNAME)
-	] switchTo waitAssociation
+	Plan registerMyNickname [
+		actorOp print(" --- [DDR] registering my nickname --- ");
+		onMsg my_nickname : my_nickname(NICKNAME) -> addRule my_nickname(NICKNAME);
+		[!? my_nickname(NICKNAME)] actorOp print(my_nickname(NICKNAME))
+	] switchTo waitUserDataRequest
 	
-	Plan waitAssociation [
-		actorOp print(" --- [D] waiting patient id--- ")
-	] transition stopAfter 30000
-	  whenMsg request_id_response -> requestData
+	Plan waitUserDataRequest [
+		actorOp print(" --- [DDR] waiting patient data request --- ")
+	] transition stopAfter 86400000
+	  whenMsg doctor_data_request_gui -> handleDataRequest
 	  finally repeatPlan
 	  
-	Plan requestData [
-		actorOp print(" --- [D] requesting data --- ");
-		onMsg request_id_response : request_id_response(ID)-> addRule my_patient(ID);
-		[!? my_id_and_patient_id(DOCID,PATID)] actorOp print(ritornomioidepationtid(DOCID,PATID));
-		[!? my_id_and_patient_id(DOCID,PATID)] forward qdc_data_receiver -m patient_parameters_request_from_doctor : patient_parameters_request_from_doctor(DOCID,PATID);
-		removeRule my_patient(ID)
-	] switchTo waitResponse
+	Plan handleDataRequest [
+		println(" --- [DDR] handling patient data request --- ");
+		onMsg doctor_data_request_gui : doctor_data_request_gui(PATIENTNICKNAME) ->  addRule patient_nickname(PATIENTNICKNAME);
+//		[!? patient_nickname(PATIENTNICKNAME)] actorOp print(patientnickanmeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee(PATIENTNICKNAME));
+		[!? id_and_nickname(DOCTORNICKNAME,ACTORID,PATIENTNICKNAME)] 
+				forward qdc_data_collector -m clinical_history_request_from_doctor : clinical_history_request_from_doctor(DOCTORNICKNAME,PATIENTNICKNAME,ACTORID);
+		removeRule patient_nickname(_)
+	] switchTo waitClinicalHistory
 	
-	Plan waitResponse resumeLastPlan [
-		actorOp print(" --- [D] waiting for a response --- ")
-	] transition stopAfter 60000
-	  whenMsg patient_parameters_response -> visualiseData,
-	  whenMsg failure -> handleError
+	Plan waitClinicalHistory [
+		println(" --- [DDR] waiting patient clinical history --- ")
+	] transition stopAfter 86400000
+	  whenMsg clinical_history_response -> handleClinicalHistoryResponse
+	  finally repeatPlan
 	  
-	Plan visualiseData [
-		actorOp print(" --- [D] visualizing data --- ");
-		onMsg patient_parameters_response : patient_parameters_response(LIST) -> actorOp print(LIST)
-	] switchTo waitUserRequest
-	  
-	Plan handleError [
-		actorOp print(" --- [D] ERROR: Unauthorized data request --- ")
-	] switchTo waitUserRequest
+	Plan handleClinicalHistoryResponse [
+		println(" --- [DDR] handling patient data request --- ");
+		onMsg clinical_history_response : clinical_history_response(ANSWER) -> actorOp print(ANSWER)
+	] switchTo waitUserDataRequest
 	
 }
 
 QActor qdoctor_notification_receiver context ctx_doctor_model {
-	/*
-	Plan waitLogin normal[
-		println(" --- [DNR] waiting login --- ")
-	] transition stopAfter 86400000
-	  whenEvent doctor_login -> init
-	  finally repeatPlan
-	*/  
+	
 	Plan init normal [
-		println(" --- [DNR] initializing --- ");
+		actorOp print(" --- [DNR] initializing --- ");
 		actorOp createGUI
+	] switchTo waitMyNickname
+	
+	Plan waitMyNickname [
+		actorOp print(" --- [DNR] waiting my nickname --- ")
+	] transition stopAfter 86400000
+	  whenMsg my_nickname -> registerMyNickname
+	  finally repeatPlan
+	
+	Plan registerMyNickname [
+		actorOp print(" --- [DNR] registering my nickname --- ");
+		onMsg my_nickname : my_nickname(NICKNAME) -> addRule my_nickname(NICKNAME);
+		[!? my_nickname(NICKNAME)] actorOp print(my_nickname(NICKNAME))
 	] switchTo waitNotification
 	
 	Plan waitNotification [
-		actorOp print(" --- [DNR] waiting notification --- ")
+		println(" --- [DNR] waiting notification --- ")
 	] transition stopAfter 86400000
-	  whenMsg notification -> receiveNotification
+	  whenMsg analysis_notification_of_patient -> handleNotification
 	  finally repeatPlan
-	  
-	Plan receiveNotification resumeLastPlan [
-		actorOp print(" --- [DNR] receive notification --- ");
-		onMsg notification : notification(ID, DESCRIPTION) -> actorOp print(DESCRIPTION)
-	]
+	
+	Plan handleNotification [
+		println(" --- [DNR] handling notification --- ");
+		onMsg analysis_notification_of_patient : analysis_notification_of_patient(RESULT,PATIENTNICKNAME) -> actorOp print(notification(RESULT,PATIENTNICKNAME))
+	] switchTo waitNotification
 	
 }
 
-QActor qdoctor_notification_sender context ctx_doctor_model {
+QActor qdoctor_advice_sender context ctx_doctor_model {
 	
 	Rules {
-		
-		my_id_and_pat_nickname(DOCID,PATNICKNAME) :- myID(DOCID), pat_nickname(PATNICKNAME).
-		
-		advice(ID,NICKNAME,NOTIFICATION) :- pat_id(ID), pat_nickname(NICKNAME), notification(NOTIFICATION), retract(pat_nickname(NICKNAME)), retract(notification(NOTIFICATION)), retract(pat_id(ID)).
+		patient_and_advice(PATIENTNICKNAME,ADVICE,DOCTORNICKNAME,DOCTORACTORID) :- patient(PATIENTNICKNAME),
+																				   advice(ADVICE),
+																				   my_nickname(DOCTORNICKNAME), 
+																				   my_actor_id(DOCTORACTORID), !.
 	}
-	/*
-	Plan waitLogin normal[
-		println(" --- [DNS] waiting login --- ")
-	] transition stopAfter 86400000
-	  whenEvent doctor_login -> init
-	  finally repeatPlan
-	*/
-	Plan init  normal [
-		println(" --- [DNS] initializing --- ");
+	
+	Plan init normal [
+		actorOp print(" --- [DAS] initializing --- ");
 		actorOp createGUI;
 		[!? actorobj(ID)] actorOp getId(ID);
-		[?? actorOpDone(OP,R)] addRule myID(R)
-	] switchTo waitInput
+		[?? actorOpDone(OP,R)] addRule my_actor_id(R)
+	] switchTo waitMyNickname
 	
-	Plan waitInput [
-		println(" --- [DNS] waiting input --- ")
+	Plan waitMyNickname [
+		actorOp print(" --- [DAS] waiting my nickname --- ")
 	] transition stopAfter 86400000
-	  whenMsg doctor_notification_sender_gui -> saveNickname
+	  whenMsg my_nickname -> registerMyNickname
 	  finally repeatPlan
-	  
-	Plan saveNickname [
-		println(" --- [DNS] saving nickname --- ");
-		onMsg doctor_notification_sender_gui : doctor_notification_sender_gui(NICKNAME) -> addRule pat_nickname(NICKNAME)
-	] transition stopAfter 86400000
-	  whenMsg doctor_notification_sender_gui -> requestId
-	  finally repeatPlan
-	  	
-	Plan requestId [
-		println(" --- [DNS] requesting id --- ");
-		onMsg doctor_notification_sender_gui : doctor_notification_sender_gui(NOTIFICATION) -> addRule notification(NOTIFICATION);
-		[!? my_id_and_pat_nickname(DOCID,PATNICKNAME)] forward qmanager_patients_name -m request_id : request_id('qdoctor_notification_sender',DOCID,PATNICKNAME)
-	] switchTo waitAssociation
 	
-	Plan waitAssociation [
-		actorOp print(" --- [DNS] waiting patient id--- ")
-	] transition stopAfter 30000
-	  whenMsg request_id_response -> sendNotification
+	Plan registerMyNickname [
+		actorOp print(" --- [DAS] registering my nickname --- ");
+		onMsg my_nickname : my_nickname(NICKNAME) -> addRule my_nickname(NICKNAME);
+		[!? my_nickname(NICKNAME)] actorOp print(my_nickname(NICKNAME))
+	] switchTo waitPatientNickname
+	
+	Plan waitPatientNickname [
+		println(" --- [DAS] waiting patient nickname --- ");
+		actorOp print("insert patient nickname")
+	] transition stopAfter 86400000
+	  whenMsg advice_to_send_gui -> handlePatientNickname,
+	  whenMsg advice_to_send_result -> handleAdviceResult
 	  finally repeatPlan
-	  
-	Plan sendNotification [
-		println(" --- [DNS] sending notification --- ");
-		onMsg request_id_response : request_id_response(ID) -> addRule pat_id(ID);
-		[!? advice(DOCID,NICKNAME,NOTIFICATION)] forward qdc_notification_manager -m advice : advice(DOCID,NICKNAME,NOTIFICATION);
-		actorOp print("advice sent to the patient")
-	] switchTo waitInput
+	
+	Plan handlePatientNickname [
+		println(" --- [DAS] getting patient nickname--- ");
+		onMsg advice_to_send_gui : advice_to_send_gui(PATIENTNICKNAME) -> addRule patient(PATIENTNICKNAME);
+		actorOp print("got nickname");
+		actorOp print("insert advice")
+	] switchTo waitAdviceToSend
+	
+	Plan waitAdviceToSend [
+		println(" --- [DAS] waiting advice --- ")
+	] transition stopAfter 86400000
+	  whenMsg advice_to_send_gui -> sendAdvice
+	  finally repeatPlan
+	
+	Plan sendAdvice [
+		println(" --- [DAS] sending advice --- ");
+		onMsg advice_to_send_gui : advice_to_send_gui(ADVICE) -> addRule advice(ADVICE);
+		actorOp print("got advice");
+		[!? patient_and_advice(PATIENTNICKNAME,ADVICE,DOCTORNICKNAME,DOCTORACTORID)] 
+					forward qdc_notification_manager -m advice_to_send : advice_to_send(PATIENTNICKNAME,ADVICE,DOCTORNICKNAME,DOCTORACTORID);
+//		[!? patient_and_advice(PATIENTNICKNAME,ADVICE,DOCTORNICKNAME,DOCTORACTORID)] actorOp print(patient_and_advice(PATIENTNICKNAME,ADVICE,DOCTORNICKNAME,DOCTORACTORID));
+		removeRule patient(_);
+		removeRule advice(_)
+	] switchTo waitPatientNickname
+	
+	Plan handleAdviceResult [
+		println(" --- [DARR] sending advice --- ");
+		onMsg advice_to_send_result : advice_to_send_result(RESULT) -> actorOp print(RESULT)
+	] switchTo waitPatientNickname
 	
 }
-

@@ -2,12 +2,12 @@
 /*
 This code is generated only ONCE
 */
-package it.unibo.qdc_data_receiver;
+package it.unibo.qdc_data_collector;
 import it.unibo.is.interfaces.IOutputEnvView;
 import it.unibo.qactors.QActorContext;
 
-public class Qdc_data_receiver extends AbstractQdc_data_receiver { 
-	public Qdc_data_receiver(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
+public class Qdc_data_collector extends AbstractQdc_data_collector { 
+	public Qdc_data_collector(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
 		super(actorId, myCtx, outEnvView);
 	}
 /*

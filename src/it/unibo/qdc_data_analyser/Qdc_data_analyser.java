@@ -2,12 +2,12 @@
 /*
 This code is generated only ONCE
 */
-package it.unibo.qmanager_patients_name;
+package it.unibo.qdc_data_analyser;
 import it.unibo.is.interfaces.IOutputEnvView;
 import it.unibo.qactors.QActorContext;
 
-public class Qmanager_patients_name extends AbstractQmanager_patients_name { 
-	public Qmanager_patients_name(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
+public class Qdc_data_analyser extends AbstractQdc_data_analyser { 
+	public Qdc_data_analyser(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
 		super(actorId, myCtx, outEnvView);
 	}
 /*

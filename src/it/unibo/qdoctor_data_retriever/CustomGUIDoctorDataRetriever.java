@@ -8,19 +8,21 @@ import it.unibo.qactors.QActorMessage;
 import it.unibo.qactors.QActorUtils;
 import it.unibo.qactors.akka.QActor;
 
-public class CustomGUISupportDoctor extends SituatedPlainObject {
+public class CustomGUIDoctorDataRetriever extends SituatedPlainObject {
 
 	private IActivityBase cmdHandler;
 	private IBasicEnvAwt envAwt;
 	private QActorContext ctx;
 	private QActor qactor;
+	private String id;
 	
-	public CustomGUISupportDoctor(IBasicEnvAwt env, QActorContext myCtx, QActor qactor) {
+	public CustomGUIDoctorDataRetriever(IBasicEnvAwt env, QActorContext myCtx, QActor qactor, String id) {
 		super(env);
 		envAwt = env;
 		init();
 		this.ctx = myCtx;
 		this.qactor = qactor;
+		this.id = id;
 	}
 	
 	protected void init(){
@@ -62,7 +64,9 @@ public class CustomGUISupportDoctor extends SituatedPlainObject {
 			String input = env.readln();
 			if (input.length() > 0) { 
 				try {
-					QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "doctor_data_request_gui", qactor.getName().substring(0, qactor.getName().length() - 5), "dispatch", "doctor_data_request_gui("+input+")");
+					System.out.println("patient nickname da guiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii" + input);
+					//QActorUtils.buildMsg(ctx, senderId, msgID, destActorId, msgType, msg)
+					QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "doctor_data_request_gui", "qdoctor_data_retriever"+id, "dispatch", "doctor_data_request_gui("+input+")");
 					qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
 				} catch (Exception e2) {
 					e2.printStackTrace();

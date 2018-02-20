@@ -3,14 +3,10 @@
 This code is generated only ONCE
 */
 package it.unibo.qdc_notification_manager;
-import java.util.ArrayList;
-import java.util.List;
-
 import it.unibo.is.interfaces.IOutputEnvView;
 import it.unibo.qactors.QActorContext;
 
 public class Qdc_notification_manager extends AbstractQdc_notification_manager { 
-	
 	public Qdc_notification_manager(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
 		super(actorId, myCtx, outEnvView);
 	}
@@ -19,14 +15,14 @@ public class Qdc_notification_manager extends AbstractQdc_notification_manager {
  */
 	
 	public void getDoctors(String list) {
-		//System.out.println(" ------ [JAVA LIST HANDLER] ---- list : " + list);
+		System.out.println(" ------ [JAVA LIST HANDLER] ---- list : " + list);
 		String list1 = list.substring(1, list.length()-1);
-		//System.out.println(" ------ [JAVA LIST HANDLER] ---- list1 : " + list1);
+		System.out.println(" ------ [JAVA LIST HANDLER] ---- list1 : " + list1);
 		if (list1.length() > 0 ) {
 			String[] listOfDocs = list1.split(",");
 		
 			for(int i = 0; i < listOfDocs.length; i++) {
-				//System.out.println(" ------ [JAVA LIST HANDLER] ---- : " + listOfDocs[i]);
+				System.out.println(" ------ [JAVA LIST HANDLER] ---- : " + listOfDocs[i]);
 				this.addRule(listOfDocs[i]);
 			}
 		}
