@@ -9,7 +9,6 @@ import it.unibo.baseEnv.basicFrame.EnvFrame;
 import it.unibo.is.interfaces.IBasicEnvAwt;
 import it.unibo.is.interfaces.IOutputEnvView;
 import it.unibo.qactors.QActorContext;
-import it.unibo.qdoctor_data_retriever.CustomGUIDoctorDataRetriever;
 
 public class Qpatient_data_retriever extends AbstractQpatient_data_retriever { 
 	

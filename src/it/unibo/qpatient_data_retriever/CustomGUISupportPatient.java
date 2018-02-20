@@ -28,26 +28,11 @@ public class CustomGUISupportPatient extends SituatedPlainObject {
 	protected void init(){
 		cmdHandler = new CmdHandler(envAwt);
 		setCommandUI();
-//		setInputUI();
-//		addCustomPanel();	
 	}
 	
 	protected void setCommandUI(){
 		envAwt.addCmdPanel("commandPanel", new String[]{"RETRIEVE DATA"}, cmdHandler);
 	}
-	
-//	protected void setInputUI(){
-//		envAwt.addInputPanel( 10 );
-//	}
-//		
-//	protected void addCustomPanel(){
-//		Panel p = new Panel();
-//		p.setBackground(Color.blue);
-//		Label l = new Label("a label");
-//		l.setBackground(Color.cyan);
-//		p.add(l);
-//		envAwt.addPanel(p);
-//	}
 	
 	public void printOnGUI(String str) {
 		println(str);
@@ -62,7 +47,6 @@ public class CustomGUISupportPatient extends SituatedPlainObject {
 		@Override
 		public void execAction(String cmd) { 
 			try {
-				//QActorUtils.buildMsg(ctx, senderId, msgID, destActorId, msgType, msg)
 				QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "patient_data_request_gui", "qpatient_data_retriever"+id, "dispatch", "patient_data_request_gui");
 				qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
 			} catch (Exception e2) {

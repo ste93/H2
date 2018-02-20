@@ -29,7 +29,6 @@ public class CustomGUIAdviceSender extends SituatedPlainObject {
 		cmdHandler = new CmdHandler(envAwt);
 		setCommandUI();
 		setInputUI();
-//		addCustomPanel();	
 	}
 	
 	protected void setCommandUI(){
@@ -39,15 +38,6 @@ public class CustomGUIAdviceSender extends SituatedPlainObject {
 	protected void setInputUI(){
 		envAwt.addInputPanel(50);
 	}
-		
-//	protected void addCustomPanel(){
-//		Panel p = new Panel();
-//		p.setBackground(Color.blue);
-//		Label l = new Label("a label");
-//		l.setBackground(Color.cyan);
-//		p.add(l);
-//		envAwt.addPanel(p);
-//	}
 	
 	public void printOnGUI(String str) {
 		println(str);
@@ -64,7 +54,6 @@ public class CustomGUIAdviceSender extends SituatedPlainObject {
 			String input = env.readln();
 			if (input.length() > 0) { 
 				try {
-					//QActorUtils.buildMsg(ctx, senderId, msgID, destActorId, msgType, msg)
 					QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "advice_to_send_gui", "qdoctor_advice_sender"+id, "dispatch", "advice_to_send_gui("+input+")");
 					qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
 				} catch (Exception e2) {

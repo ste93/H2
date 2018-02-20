@@ -29,7 +29,6 @@ public class CustomGUIDoctorDataRetriever extends SituatedPlainObject {
 		cmdHandler = new CmdHandler(envAwt);
 		setCommandUI();
 		setInputUI();
-//		addCustomPanel();	
 	}
 	
 	protected void setCommandUI(){
@@ -39,15 +38,6 @@ public class CustomGUIDoctorDataRetriever extends SituatedPlainObject {
 	protected void setInputUI(){
 		envAwt.addInputPanel(25);
 	}
-//		
-//	protected void addCustomPanel(){
-//		Panel p = new Panel();
-//		p.setBackground(Color.blue);
-//		Label l = new Label("a label");
-//		l.setBackground(Color.cyan);
-//		p.add(l);
-//		envAwt.addPanel(p);
-//	}
 	
 	public void printOnGUI(String str) {
 		println(str);
@@ -64,8 +54,6 @@ public class CustomGUIDoctorDataRetriever extends SituatedPlainObject {
 			String input = env.readln();
 			if (input.length() > 0) { 
 				try {
-					System.out.println("patient nickname da guiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii" + input);
-					//QActorUtils.buildMsg(ctx, senderId, msgID, destActorId, msgType, msg)
 					QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "doctor_data_request_gui", "qdoctor_data_retriever"+id, "dispatch", "doctor_data_request_gui("+input+")");
 					qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
 				} catch (Exception e2) {

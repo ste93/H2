@@ -1,9 +1,5 @@
 package it.unibo.qdc_register;
 
-import java.awt.Color;
-import java.awt.Label;
-import java.awt.Panel;
-
 import it.unibo.is.interfaces.IActivityBase;
 import it.unibo.system.SituatedPlainObject;
 import it.unibo.is.interfaces.IBasicEnvAwt;
@@ -31,7 +27,6 @@ public class CustomGUIRegistration extends SituatedPlainObject {
 		cmdHandler = new CmdHandler(envAwt);
 		setCommandUI();
 		setInputUI();
-//		addCustomPanel();	
 	}
 	
 	protected void setCommandUI(){
@@ -41,15 +36,6 @@ public class CustomGUIRegistration extends SituatedPlainObject {
 	protected void setInputUI(){
 		envAwt.addInputPanel(50);
 	}
-		
-//	protected void addCustomPanel(){
-//		Panel p = new Panel();
-//		p.setBackground(Color.blue);
-//		Label l = new Label("a label");
-//		l.setBackground(Color.cyan);
-//		p.add(l);
-//		envAwt.addPanel(p);
-//	}
 	
 	public void printOnGUI(String str) {
 		println(str);
@@ -68,7 +54,6 @@ public class CustomGUIRegistration extends SituatedPlainObject {
 			case "DOCTOR REGISTRATION":	
 				if (input.length() > 0) { 
 					try {
-						//QActorUtils.buildMsg(ctx, senderId, msgID, destActorId, msgType, msg)
 						QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "registration_gui", "qdc_register", "dispatch", "registration_gui("+input+",d)");
 						qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
 					} catch (Exception e2) {

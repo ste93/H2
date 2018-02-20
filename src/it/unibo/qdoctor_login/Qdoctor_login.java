@@ -9,7 +9,6 @@ import it.unibo.baseEnv.basicFrame.EnvFrame;
 import it.unibo.is.interfaces.IBasicEnvAwt;
 import it.unibo.is.interfaces.IOutputEnvView;
 import it.unibo.qactors.QActorContext;
-import it.unibo.qpatient_login.CustomGUIPatientLogin;
 
 public class Qdoctor_login extends AbstractQdoctor_login { 
 	
