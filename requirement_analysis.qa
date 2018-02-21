@@ -1,4 +1,4 @@
-System adviceFromDoctor
+System h2
 
 //registration(user nickname,user role - doctor or patient)
 Dispatch registration_gui : registration_gui(NICKNAME,ROLE)
