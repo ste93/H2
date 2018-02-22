@@ -11,6 +11,10 @@ Dispatch login_doctor_gui : login_doctor_gui(NICKNAME)
 
 //check_login(user nickname,user role - doctor or patient)
 Dispatch check_login : check_login(NICKNAME,ROLE)
+Dispatch check_patient_login : check_patient_login(NICKNAME,ROLE)
+Dispatch check_doctor_login : check_doctor_login(NICKNAME,ROLE)
+
+Dispatch check_login_response : check_login_response(RESPONSE)
 
 //login_result(the result of the login request)
 Dispatch login_result : login_result(RESULT)
@@ -115,7 +119,7 @@ Dispatch association_response : association_response(RESPONSE)
 Dispatch check_association_for_data_request: check_association_for_data_request(DOCTORNICKNAME,PATIENTNICKNAME)
 Dispatch check_association_for_advice: check_association_for_advice(DOCTORNICKNAME,PATIENTNICKNAME)
 
-Dispatch registration_request : registration_request(USERNICKNAME)
+Dispatch registration_request : registration_request(USERNICKNAME,ROLE)
 Dispatch registration_response : registration_response(RESPONSE)
 
 /////////////// CONTEXTS /////////////////////////////////////////////////
@@ -266,6 +270,8 @@ QActor quser_data context ctx_user_data_KB {
 		already_registered :- try_registration(NICKNAME,ROLE), registered(NICKNAME,_).
 		
 		registration_approved(NICKNAME,ROLE) :- registration, try_registration(NICKNAME,ROLE).
+		
+		can_login :- try_login(NICKNAME,ROLE), registered(NICKNAME,ROLE).
 	}
 	
 	Plan init normal [
@@ -275,27 +281,37 @@ QActor quser_data context ctx_user_data_KB {
 	Plan waitRequest [
 		println(" --- [User Data KB] Waiting Request--- ")
 	] transition stopAfter 86400000
-	  whenMsg registration_request -> handleRequest
+	  whenMsg registration_request -> handleRequest, 
+	  whenMsg check_login -> checkLogin
 	  finally repeatPlan
 	  
 	Plan handleRequest resumeLastPlan[
 	  	println(" --- [User Data KB] handling check Request--- ");
 	  	onMsg registration_request : registration_request(USERNICKNAME,ROLE) -> addRule try_registration(USERNICKNAME,ROLE);
+	  	printCurrentMessage;
+	  	[!? try_registration(USERNICKNAME,ROLE) ] println(attempt(USERNICKNAME,ROLE));
+	  	[!? already_registered] println("sono già registrato");
 		[!? already_registered] forward qdc_register -m registration_response : registration_response("This user name is already used. Choose another one!") else addRule registration;
-		[!? registration_approved(NICKNAME,ROLE)] println("APPROVED !");
+		[!? registration_approved(NICKNAME,ROLE)] println ("APPROVED");
 		[!? registration_approved(NICKNAME,ROLE)] demo asserta(registered(NICKNAME,ROLE));
-		[!? registration] println("ESPLODI");
+		[!? registered(NICKNAME,ROLE)] println(registered(NICKNAME,ROLE));
 		[?? registration] forward qdc_register -m registration_response : registration_response("Registration complete!");
 		removeRule try_registration(_,_)
 	] 
 	
+	
+	Plan checkLogin resumeLastPlan [
+		println(" --- [User Data KB] Handling login Request--- ");
+		onMsg check_login : check_login(NICKNAME,ROLE) -> addRule try_login(NICKNAME,ROLE);
+		printCurrentMessage;
+		[!? can_login] forward qdc_register  -m check_login_response : check_login_response("Login ok") 
+				  else  forward qdc_register -m check_login_response : check_login_response("Can not login. You are not register");
+		removeRule try_login(_,_)
+	]
+	
 }
 
 QActor qdc_register context ctx_data_centre {
-	
-	Rules {
-		can_login :- try_login(NICKNAME,ROLE), registered(NICKNAME,ROLE).
-	}
 	
 	Plan init normal [
 		println(" --- [DCR] initializing --- ");
@@ -306,17 +322,13 @@ QActor qdc_register context ctx_data_centre {
 		println(" --- [DCR] waiting registration --- ")
 	] transition stopAfter 86400000
 	  whenMsg registration_gui -> checkAndRegister,
-	  whenMsg check_login -> checkLogin
+	  whenMsg check_patient_login -> checkLoginPatient, 
+	  whenMsg check_doctor_login -> checkLoginDoctor
 	  finally repeatPlan
 	  
 	Plan checkAndRegister [
 		println(" --- [DCR] checking registration and register --- ");
-		onMsg registration_gui : registration_gui(NICKNAME,ROLE) -> forward quser_data -m registration_request : registration_request(USERNICKNAME,ROLE)
-//		onMsg registration_gui : registration_gui(NICKNAME,ROLE) -> addRule try_registration(NICKNAME,ROLE);
-//		[!? already_registered] actorOp print("This user name is already used. Choose another one!") else addRule registration;
-//		[!? registration_approved(NICKNAME,ROLE)] demo asserta(registered(NICKNAME,ROLE));
-//		[?? registration] actorOp print("Registration complete!");
-//		removeRule try_registration(,)
+		onMsg registration_gui : registration_gui(USERNICKNAME,ROLE) -> forward quser_data -m registration_request : registration_request(USERNICKNAME,ROLE)
 	] switchTo waitRegisterResponse
 	
 	Plan waitRegisterResponse [
@@ -330,15 +342,38 @@ QActor qdc_register context ctx_data_centre {
 		onMsg registration_response : registration_response(RESPONSE) -> actorOp print(RESPONSE) 
 	] switchTo waitRegistrationOrChecks
 	
-	Plan checkLogin resumeLastPlan [
-		println(" --- [DCR] checking login --- ");
-		onMsg check_login : check_login(NICKNAME,ROLE) -> addRule try_login(NICKNAME,ROLE);
-		actorOp memoCurentCaller;
-		[!? can_login] replyToCaller -m login_result : login_result("Login ok") 
-				  else replyToCaller -m login_result : login_result("Can not login. You are not register");
-		removeRule try_login(_,_)
-	]
+	Plan checkLoginPatient resumeLastPlan [
+		println(" --- [DCR] checking patient login --- ");
+		onMsg check_patient_login : check_patient_login(NICKNAME,ROLE) -> forward quser_data -m check_login : check_login(NICKNAME,ROLE)
+	] switchTo waitPatientResponse
 	
+	Plan waitPatientResponse [
+		println(" --- [DCR] waiting response for patient login check --- ")
+	] transition stopAfter 840000000
+	whenMsg check_login_response -> handlePatientResponse
+	finally repeatPlan
+	
+	Plan handlePatientResponse [
+		println(" --- [DCR] handling response for patient login check --- ");
+		onMsg check_login_response : check_login_response(RESPONSE) -> forward qpatient_login -m login_result : login_result(RESPONSE)
+	] switchTo waitRegistrationOrChecks
+	
+	
+	Plan checkLoginDoctor resumeLastPlan [
+		println(" --- [DCR] checking doctor login --- ");
+		onMsg check_doctor_login : check_doctor_login(NICKNAME,ROLE) -> forward quser_data -m check_login : check_login(NICKNAME,ROLE)
+	] switchTo waitDoctorResponse
+	
+	Plan waitDoctorResponse [
+		println(" --- [DCR] waiting response for doctor login check --- ")
+	] transition stopAfter 840000000
+	whenMsg check_login_response -> handleDoctorResponse
+	finally repeatPlan
+	
+	Plan handleDoctorResponse [
+		println(" --- [DCR] handling doctor response check --- ");
+		onMsg check_login_response : check_login_response(RESPONSE) -> forward qdoctor_login -m login_result : login_result(RESPONSE)
+	] switchTo waitRegistrationOrChecks
 }
 
 QActor qdc_nickname_id_handler context ctx_data_centre {
@@ -643,9 +678,9 @@ QActor qpatient_login context ctx_patient {
 	  finally repeatPlan
 	  
 	Plan chekLogin [
-		println(" --- [PL] waiting login --- ");
+		println(" --- [PL] checking login --- ");
 		onMsg login_patient_gui : login_patient_gui(NICKNAME) -> demo asserta(patient_nickname(NICKNAME)); 
-		[!? patient_nickname(NICKNAME)] forward qdc_register -m check_login : check_login(NICKNAME,"p")
+		[!? patient_nickname(NICKNAME)] forward qdc_register -m check_patient_login : check_patient_login(NICKNAME,"p")
 	] switchTo waitLoginResult
 	
 	Plan waitLoginResult [
@@ -901,9 +936,9 @@ QActor qdoctor_login context ctx_doctor {
 	  finally repeatPlan
 	  
 	Plan chekLogin [
-		println(" --- [DL] waiting login --- ");
+		println(" --- [DL] checking login --- ");
 		onMsg login_doctor_gui : login_doctor_gui(NICKNAME) -> demo asserta(doctor_nickname(NICKNAME)); 
-		[!? doctor_nickname(NICKNAME)] forward qdc_register -m check_login : check_login(NICKNAME,"d")
+		[!? doctor_nickname(NICKNAME)] forward qdc_register -m check_doctor_login : check_doctor_login(NICKNAME,"d")
 	] switchTo waitLoginResult
 	
 	Plan waitLoginResult [
