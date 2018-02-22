@@ -2,23 +2,20 @@
 /*
 This code is generated only ONCE
 */
-package it.unibo.qpatient_data_sender;
+package it.unibo.qsensor_temperature;
 import it.unibo.is.interfaces.IOutputEnvView;
 import it.unibo.qactors.QActorContext;
 
-public class Qpatient_data_sender extends AbstractQpatient_data_sender { 
-	
-	public Qpatient_data_sender(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
+public class Qsensor_temperature extends AbstractQsensor_temperature { 
+	public Qsensor_temperature(String actorId, QActorContext myCtx, IOutputEnvView outEnvView )  throws Exception{
 		super(actorId, myCtx, outEnvView);
 	}
 /*
  * ADDED BY THE APPLICATION DESIGNER	
  */
-
 	public String getId(final String oldID) {
 		String newID = oldID.substring(0, oldID.length()-5);
-		String ID = newID.replaceAll("\\D+", ""); 
+		String ID = newID.replaceAll("\\D+", "");
 		return ID;
 	}
-	
 }

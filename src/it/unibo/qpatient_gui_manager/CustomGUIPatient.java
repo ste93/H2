@@ -31,7 +31,7 @@ public class CustomGUIPatient extends SituatedPlainObject {
 	}
 	
 	protected void setCommandUI(){
-		envAwt.addCmdPanel("commandPanel", new String[]{"RETRIEVE DATA"}, cmdHandler);
+		envAwt.addCmdPanel("commandPanel", new String[]{"RETRIEVE DATA","ADD TEMPERATURE SENS","ADD GLYCEMIA SENS", "REMOVE TEMPERATURE SENS", "REMOVE GLYCEMIA SENS"}, cmdHandler);
 	}
 	
 	public void printOnGUI(String str) {
@@ -46,13 +46,53 @@ public class CustomGUIPatient extends SituatedPlainObject {
 		
 		@Override
 		public void execAction(String cmd) { 
-			try {
-				QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "patient_data_request_gui", "qpatient_data_retriever"+id, "dispatch", "patient_data_request_gui");
-				qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
-			} catch (Exception e2) {
-				e2.printStackTrace();
+			
+			switch (cmd) {
+				case "RETRIEVE DATA" : 
+					try {
+						QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "patient_data_request_gui", "qpatient_data_retriever"+id, "dispatch", "patient_data_request_gui");
+						qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
+					} catch (Exception e2) {
+						e2.printStackTrace();
+					}
+				break;
+				
+				case "ADD TEMPERATURE SENS" : 
+					try {
+						QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "add_temperature_gui", "qpatient_sensor_manager"+id, "dispatch", "add_temperature_gui");
+						qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
+					} catch (Exception e2) {
+						e2.printStackTrace();
+					}
+				break;
+				
+				case "ADD GLYCEMIA SENS" : 
+					try {
+						QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "add_glycemia_gui", "qpatient_sensor_manager"+id, "dispatch", "add_glycemia_gui");
+						qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
+					} catch (Exception e2) {
+						e2.printStackTrace();
+					}
+				break;
+				
+				case "REMOVE TEMPERATURE SENS" : 
+					try {
+						QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "remove_temperature_gui", "qpatient_sensor_manager"+id, "dispatch", "remove_temperature_gui");
+						qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
+					} catch (Exception e2) {
+						e2.printStackTrace();
+					}
+				break;
+				
+				case "REMOVE GLYCEMIA SENS" : 
+					try {
+						QActorMessage mqa = QActorUtils.buildMsg(ctx, qactor.getName(), "remove_glycemia_gui", "qpatient_sensor_manager"+id, "dispatch", "remove_glycemia_gui");
+						qactor.sendMsg(mqa.msgId(), mqa.msgReceiver(), mqa.msgType(), mqa.msgContent());
+					} catch (Exception e2) {
+						e2.printStackTrace();
+					}
+				break;
 			}
 		}
 	}
-	
 }

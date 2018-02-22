@@ -124,6 +124,15 @@ Dispatch registration_response : registration_response(RESPONSE)
 
 Dispatch history_request : history_request(PATIENTNICKNAME)
 
+Dispatch add_temperature_gui : add_temperature_gui
+Dispatch add_glycemia_gui : add_glycemia_gui
+Dispatch remove_temperature_gui : remove_temperature_gui
+Dispatch remove_glycemia_gui : remove_glycemia_gui
+
+Dispatch sensor_data : sensor_data(SENSORTYPE,PARAMETER)
+
+
+
 /////////////// CONTEXTS /////////////////////////////////////////////////
 
 Context ctx_external_associationKb ip[host="localhost" port=8070]
@@ -141,6 +150,8 @@ Context ctx_doctor_init 	 ip[host="localhost" port=2346]
 Context ctx_doctor_model 	 ip[host="localhost" port=2347]
 
 Context ctx_analyser 	 	 ip[host="localhost" port=3456]
+
+Context ctx_sensor 			 ip[host="localhost" port=1237]
 
 /////////////////////////////////////////////////////////////////////////
 
@@ -543,7 +554,7 @@ QActor qdc_data_collector context ctx_data_centre {
 
 }
 
-QActor qdc_data_analyser context ctx_data_centre {
+QActor qdc_data_analyser context ctx_analyser {
 	
 	Rules {		
 		analysis(PATIENTNICKNAME,ACTORID,"febbre") :- patient_and_parameter(PATIENTNICKNAME,ACTORID,PARAMETER), eval(gt,PARAMETER,37),!.
@@ -764,7 +775,7 @@ QActor qpatient_login context ctx_patient {
 	
 	Plan createActors [
 		println(" --- [PL] creating actors --- ");
-		[!? newName(qpatient_data_sender, Name, N)] demo createActor(Name, 'it.unibo.qpatient_data_sender.Qpatient_data_sender');
+		[!? newName(qpatient_sensor_manager, Name, N)] demo createActor(Name, 'it.unibo.qpatient_sensor_manager.Qpatient_sensor_manager');
 		[!? myNewName(qpatient_data_retriever, Name, N)] demo createActor(Name, 'it.unibo.qpatient_data_retriever.Qpatient_data_retriever');
 		[!? myNewName(qpatient_notification_receiver, Name, N)] demo createActor(Name, 'it.unibo.qpatient_notification_receiver.Qpatient_notification_receiver');
 		[!? myNewName(qpatient_gui_manager, Name, N)] demo createActor(Name, 'it.unibo.qpatient_gui_manager.Qpatient_gui_manager');
@@ -799,8 +810,7 @@ QActor qpatient_initializing context ctx_patient_init {
 		onMsg nickname_and_id : nickname_and_id(NICKNAME,ID) -> addRule nickname_and_id(NICKNAME,ID);
 //		printCurrentMessage;
 		//[!? nickname_and_id(NICKNAME,_)] println(my_nickname(NICKNAME));
-		[!? nickname_and_actor('qpatient_data_sender',NICKNAME,ACTORNAME)] sendto ACTORNAME in ctx_patient -m my_nickname : my_nickname(NICKNAME);
-//		[!? nickname_and_actor('qpatient_data_sender',NICKNAME,ACTORNAME)] println(nameeeeeeeeeeeeeeeeeeeeeeeeeeeee(ACTORNAME));
+		[!? nickname_and_actor('qpatient_sensor_manager',NICKNAME,ACTORNAME)] sendto ACTORNAME in ctx_patient -m my_nickname : my_nickname(NICKNAME);
 		[!? nickname_and_actor('qpatient_data_retriever',NICKNAME,ACTORNAME)] sendto ACTORNAME in ctx_patient -m my_nickname : my_nickname(NICKNAME);
 		[!? nickname_and_actor('qpatient_notification_receiver',NICKNAME,ACTORNAME)] sendto ACTORNAME in ctx_patient -m my_nickname : my_nickname(NICKNAME);
 		[!? nickname_and_actor('qpatient_gui_manager',NICKNAME,ACTORNAME)] sendto ACTORNAME in ctx_patient -m my_nickname : my_nickname(NICKNAME);
@@ -809,7 +819,7 @@ QActor qpatient_initializing context ctx_patient_init {
 	
 }
 
-QActor qpatient_data_sender context ctx_patient_model {
+QActor qpatient_sensor_manager context ctx_patient_model {
 	
 	Rules {
 		parameter(36).
@@ -818,38 +828,156 @@ QActor qpatient_data_sender context ctx_patient_model {
 		parameter(39).
 		
 		get_parameter(PATIENTNICKNAME,ACTORID,VALUE) :- my_nickname(PATIENTNICKNAME), my_actor_id(ACTORID) , parameter(VALUE).
+		
+		my_new_name(ACTORNAME, NAME) :- my_nickname(PATIENTNICKNAME), 
+										my_actor_id(NID), text_term(ID, NID), 
+										text_concat(ACTORNAME,PATIENTNICKNAME,TEMP_NAME), 
+										text_concat(TEMP_NAME,ID,NAME).
+	
+		get_my_name(MYNAME, 'ok') :- ok, my_actor_id(NID), text_term(ID,NID), text_concat('qpatient_sensor_manager', ID, MYNAME).
+		get_my_name(MYNAME, 'no') :- no, my_actor_id(NID), text_term(ID,NID), text_concat('qpatient_sensor_manager', ID, MYNAME).
 	}
 	
 	Plan init normal [
-		println(" --- [PDS] initializing --- ");
+		println(" --- [PSM] initializing --- ");
 		[!? actorobj(ID)] actorOp getId(ID);
-		[?? actorOpDone(OP,R)] addRule my_actor_id(R)
+		[?? actorOpDone(OP,R)] addRule my_actor_id(R);
+		[!? my_actor_id(R)] println(my_actor_id(R))
 	] switchTo waitMyNickname
 	
 	Plan waitMyNickname [
-		println(" --- [PDS] waiting my nickname --- ")
+		println(" --- [PSM] waiting my nickname --- ")
 	] transition stopAfter 86400000
 	  whenMsg my_nickname -> registerMyNickname
 	  finally repeatPlan
 	
 	Plan registerMyNickname [
-		println(" --- [PDS] registering my nickname --- ");
+		println(" --- [PSM] registering my nickname --- ");
 		onMsg my_nickname : my_nickname(NICKNAME) -> addRule my_nickname(NICKNAME)
-	] switchTo receiveData
+	] switchTo waitInput
+	
+	Plan waitInput [
+		println(" --- [PSM] waiting inputs --- ")
+	] transition stopAfter 86400000
+	  whenMsg add_temperature_gui -> checkTempSensor,
+	  whenMsg add_glycemia_gui -> checkGlycemiaSensor,
+	  whenMsg remove_temperature_gui -> removeTempSensor,
+	  whenMsg remove_glycemia_gui -> removeGlycemiaSensor,
+	  whenMsg sensor_data -> receiveData
+	  
+	Plan checkTempSensor [
+		println(" --- [PSM] checking the presence of temp sensors --- ");
+		[!? temperature_sensor(SENSORNAME)] actorOp print("Sensor already present");
+		[!? temperature_sensor(SENSORNAME)] addRule ok else addRule no;
+		[!? get_my_name(MYNAME, 'ok')] forward MYNAME -m finish : finish;
+		[!? get_my_name(MYNAME, 'no')] forward MYNAME -m go_on : go_on;
+		removeRule ok;
+		removeRule no
+	] transition stopAfter 864000000
+	  whenMsg finish -> waitInput,
+	  whenMsg go_on -> addTempSensor
+	  
+	  Plan addTempSensor [
+	  	println(" --- [PSM] adding a new temperature sensor --- ");
+		[!? my_new_name('qsensor_temperature', SENSORNAME)] addRule temperature_sensor(SENSORNAME);
+		[!? temperature_sensor(SENSORNAME)] println(new_temp_sensor(SENSORNAME));
+		[!? temperature_sensor(SENSORNAME)] demo createActor(SENSORNAME, 'it.unibo.qsensor_temperature.Qsensor_temperature')
+	] switchTo waitInput
+	
+	Plan checkGlycemiaSensor [
+		println(" --- [PSM] checking the presence of glycemia sensors --- ");
+		[!? glycemia_sensor(SENSORNAME)] actorOp print("Sensor already present");
+		[!? glycemia_sensor(SENSORNAME)] addRule ok else addRule no;
+		[!? get_my_name(MYNAME, 'ok')] forward MYNAME -m finish : finish;
+		[!? get_my_name(MYNAME, 'no')] forward MYNAME -m go_on : go_on;
+		removeRule ok;
+		removeRule no
+	] transition stopAfter 864000000
+	  whenMsg finish -> waitInput,
+	  whenMsg go_on -> addGlycemiaSensor
+	  
+	  Plan addGlycemiaSensor [
+	  	println(" --- [PSM] adding a new glycemia sensor --- ");
+		[!? my_new_name('qsensor_glycemia', SENSORNAME)] addRule glycemia_sensor(SENSORNAME);
+		[!? glycemia_sensor(SENSORNAME)] println(new_glycemia_sensor(SENSORNAME));
+		[!? glycemia_sensor(SENSORNAME)] demo createActor(SENSORNAME, 'it.unibo.qsensor_glycemia.Qsensor_glycemia')
+	] switchTo waitInput
+	
+	Plan removeTempSensor resumeLastPlan [
+		println(" --- [PSM] removing the temperature sensor --- ");
+		[?? get_names_temp(SENSORNAME,_, _)] sendto SENSORNAME in ctx_patient -m finish : finish
+	]  switchTo waitInput
+	
+	Plan removeGlycemiaSensor resumeLastPlan [
+		println(" --- [PSM] removing the glycemia sensor --- ");
+		[?? get_names_glycemia(SENSORNAME, _, _)] sendto SENSORNAME in ctx_patient -m finish : finish
+	]  switchTo waitInput
+	
 	
 	Plan receiveData [
-		[?? parameter(X) ] addRule parameter(X)
+		println(" --- [PSM] receive data from sensors --- ");
+		onMsg sensor_data : sensor_data(SENSORTYPE,PARAMETER) -> addRule sensor_data(SENSORTYPE,PARAMETER);
+		[?? sensor_data ('temperature',PARAMETER)] demo asserta(parameter(temperatureC(PARAMETER)));
+		[?? sensor_data ('glycemia',PARAMETER)] demo asserta(parameter(glycemiaMgDl(PARAMETER)))
 	] switchTo sendData
 	
 	Plan sendData [
-		println(" --- [PDS] sending parameters --- ");
+		println(" --- [PSM] sending parameters to the system --- ");
 		delay 2000;
 		[!? get_parameter(PATIENTNICKNAME,_,VALUE)] forward qdc_data_collector -m recorded_parameter: recorded_parameter(PATIENTNICKNAME,VALUE);
 		[!? get_parameter(PATIENTNICKNAME,ACTORID,VALUE)] forward qdc_data_analyser -m analyse_parameter : analyse_parameter(PATIENTNICKNAME,ACTORID,VALUE)
-	] switchTo receiveData
-	
+	] switchTo waitInput
+}
 
+QActor qsensor_temperature context ctx_sensor{
 	
+	Rules {
+		p('temperature', PATIENTNAME) :-  my_patient_id(NID), text_term(ID,NID), text_concat('qpatient_sensor_manager', ID, PATIENTNAME).
+	}
+	
+	Plan init normal [
+		println(" --- [Sensor(Temp)] initializing --- ");
+		[!? actorobj(ID)] actorOp getId(ID);
+		[?? actorOpDone(OP,R)] addRule my_patient_id(R)
+	] switchTo sendData
+	
+	Plan sendData [
+		println(" --- [Sensor(Temp)] sending parameters --- ");
+		delay 2000;
+		[!? p(TYPE, PATIENTNAME)] println(sendingto(TYPE, PATIENTNAME));
+		[!? p(TYPE, PATIENTNAME)] forward PATIENTNAME -m sensor_data: sensor_data(TYPE,36);
+		delay 2000;
+		[!? p(TYPE, PATIENTNAME)] forward PATIENTNAME -m sensor_data: sensor_data(TYPE,37);
+		delay 2000;
+		[!? p(TYPE, PATIENTNAME)] forward PATIENTNAME -m sensor_data: sensor_data(TYPE,38);
+		delay 2000;
+		[!? p(TYPE, PATIENTNAME)] forward PATIENTNAME -m sensor_data: sensor_data(TYPE,39)
+	] finally repeatPlan
+}
+
+QActor qsensor_glycemia context ctx_sensor{
+	
+	Rules {
+		p('glycemia', PATIENTNAME) :-  my_patient_id(NID), text_term(ID, NID), text_concat('qpatient_sensor_manager', ID, PATIENTNAME).
+	}
+	
+	Plan init normal [
+		println(" --- [Sensor(glycemia)] initializing --- ");
+		[!? actorobj(ID)] actorOp getId(ID);
+		[?? actorOpDone(OP,R)] addRule my_patient_id(R)
+	] switchTo sendData
+	
+	Plan sendData [
+		println(" --- [Sensor(glycemia)] sending parameters --- ");
+		delay 2000;
+		[!? p(TYPE, PATIENTNAME)] forward PATIENTNAME -m sensor_data: sensor_data(TYPE,70);
+		delay 2000;
+		[!? p(TYPE, PATIENTNAME)] forward PATIENTNAME -m sensor_data: sensor_data(TYPE,150);
+		delay 2000;
+		[!? p(TYPE, PATIENTNAME)] forward PATIENTNAME -m sensor_data: sensor_data(TYPE,100);
+		delay 2000;
+		[!? p(TYPE, PATIENTNAME)] forward PATIENTNAME -m sensor_data: sensor_data(TYPE,300)
+	] finally repeatPlan
 }
 
 QActor qpatient_data_retriever context ctx_patient_model {
