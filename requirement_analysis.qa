@@ -177,7 +177,7 @@ QActor qassociation context ctx_external_associationKb{
 	  Plan handleDoctors resumeLastPlan[
 	  	println(" --- [AssociationKB] handling doctor Request--- ");
 	  	onMsg association_doctors : association_doctors(PATIENTNICKNAME) -> addRule request(PATIENTNICKNAME);
-	  	printCurrentMessage;
+	  	//printCurrentMessage;
 	  	[!? request(PATNICKNAME)] println (nick(PATNICKNAME));
 	  	[!? get_associations(LIST)] println (list(LIST));
 	  	[!? get_associations(LIST)] forward qassociation_manager -m association_response : association_response(LIST);
@@ -264,10 +264,10 @@ QActor quser_data context ctx_user_data_KB {
 	
 	Rules {
 		//TODO
-//		registered("a","p").
-//		registered("b","p").
-//		registered("c","d").
-//		registered("d","d").
+		registered("a","p").
+		registered("b","p").
+		registered("c","d").
+		registered("d","d").
 		
 		already_registered :- try_registration(NICKNAME,ROLE), registered(NICKNAME,_).
 		
@@ -276,6 +276,8 @@ QActor quser_data context ctx_user_data_KB {
 		can_login :- try_login(NICKNAME,ROLE), registered(NICKNAME,ROLE).
 		
 		get_history(HISTORY) :- patient(PATNICKNAME), findall(parameter(PARAMETER),parameter(PATNICKNAME,PARAMETER), HISTORY).	
+		
+		getting_ID(ACTORID) :- user_nickname(USERNICKNAME), association(USERNICKNAME,ACTORID).
 	}
 	
 	Plan init normal [
@@ -288,7 +290,9 @@ QActor quser_data context ctx_user_data_KB {
 	  whenMsg registration_request -> handleRequest, 
 	  whenMsg check_login -> checkLogin,
 	  whenMsg recorded_parameter -> recordParameter,
-	  whenMsg history_request -> historyRequest
+	  whenMsg history_request -> historyRequest,
+	  whenMsg nickname_id_association -> saveAssociation,
+	  whenMsg id_request -> idRequest
 	  finally repeatPlan
 	  
 	Plan handleRequest resumeLastPlan[
@@ -304,7 +308,7 @@ QActor quser_data context ctx_user_data_KB {
 	Plan checkLogin resumeLastPlan [
 		println(" --- [User Data KB] Handling login Request--- ");
 		onMsg check_login : check_login(NICKNAME,ROLE) -> addRule try_login(NICKNAME,ROLE);
-		printCurrentMessage;
+		//printCurrentMessage;
 		[!? can_login] forward qdc_register  -m check_login_response : check_login_response("Login ok") 
 				  else  forward qdc_register -m check_login_response : check_login_response("Can not login. You are not register");
 		removeRule try_login(_,_)
@@ -315,11 +319,24 @@ QActor quser_data context ctx_user_data_KB {
 		onMsg recorded_parameter: recorded_parameter(NICKNAME,PARAMETER) -> demo asserta(parameter(NICKNAME,PARAMETER))
 	]
 	
+	Plan saveAssociation resumeLastPlan [
+		println(" --- [User Data KB] recording association --- ");
+		onMsg nickname_id_association: nickname_id_association(USERNICKNAME,ACTORID) ->demo asserta(association(USERNICKNAME,ACTORID))
+	]
+	
 	Plan historyRequest resumeLastPlan [
 		println(" --- [User Data KB] Handling history Request--- ");
 		onMsg history_request : history_request(PATNICKNAME) -> addRule patient(PATNICKNAME);
 		[!? get_history(HISTORY)] forward qdc_data_collector -m clinical_history_response : clinical_history_response(HISTORY);
 		removeRule patient(_)
+	]
+	
+	Plan idRequest resumeLastPlan [
+		println(" --- [User Data KB] Handling ID Request--- ");
+		onMsg id_request : id_request(USERNICKNAME) -> addRule user_nickname(USERNICKNAME);
+		//printCurrentMessage;
+		[!? getting_ID(ACTORID)] forward qdc_nickname_id_handler -m id_response : id_response(ACTORID) else forward qdc_nickname_id_handler -m not_found : not_found ;
+		removeRule user_nickname(_)
 	]
 }
 
@@ -390,10 +407,6 @@ QActor qdc_register context ctx_data_centre {
 
 QActor qdc_nickname_id_handler context ctx_data_centre {
 	
-	Rules {
-		getting_ID(ACTORID) :- user_nickname(USERNICKNAME), association(USERNICKNAME,ACTORID).
-	}
-	
 	Plan init normal [
 		println(" --- [DCNIH] initializing --- ")
 	] switchTo waitAssociationAndRequest
@@ -407,18 +420,26 @@ QActor qdc_nickname_id_handler context ctx_data_centre {
 	  
 	Plan makeAssociation resumeLastPlan [
 		println(" --- [DCNIH] making association --- ");
-		onMsg nickname_id_association : nickname_id_association(USERNICKNAME,ACTORID) -> demo asserta(association(USERNICKNAME,ACTORID))
+		onMsg nickname_id_association : nickname_id_association(USERNICKNAME,ACTORID) -> forward quser_data -m nickname_id_association :nickname_id_association(USERNICKNAME,ACTORID)	
 	]
 	
-	Plan findID resumeLastPlan [
-		printCurrentMessage;
-		println(" --- [DCNIH] finding ID --- ");
-		onMsg id_request : id_request(USERNICKNAME) -> addRule user_nickname(USERNICKNAME);
-		[!? getting_ID(ACTORID)] forward qdc_notification_manager -m id_response : id_response(ACTORID) else forward qdc_notification_manager -m not_found : not_found;
-//		[!? getting_ID(ACTORID)] println(id_nickname_handleeeeeeeeeeeeeeeeeeeeeeeeeeeeeeerrrrrrrr(ACTORID));
-		removeRule user_nickname(_)
-	]
+	Plan findID  [
+		println(" --- [DCNIH] requesting ID --- ");
+		onMsg id_request : id_request(USERNICKNAME) -> forward quser_data -m id_request : id_request(USERNICKNAME)
+	] switchTo waitID 
 	
+	Plan waitID [
+		println(" --- [DCNIH] waiting ID --- ")
+	] transition stopAfter 86400000
+	  whenMsg id_response-> sendID,
+	  whenMsg not_found-> sendID
+	  finally repeatPlan
+		
+	Plan sendID [
+//		printCurrentMessage;
+	onMsg id_response : id_response(ACTORID) -> forward qdc_notification_manager -m id_response : id_response(ACTORID);
+	onMsg not_found : not_found -> forward qdc_notification_manager -m not_found : not_found
+	] switchTo waitAssociationAndRequest
 }
 
 QActor qdc_data_collector context ctx_data_centre {
@@ -457,8 +478,6 @@ QActor qdc_data_collector context ctx_data_centre {
 	Plan recordParameter [
 		println(" --- [DCDC] recording parameters --- ");
 		onMsg recorded_parameter: recorded_parameter(NICKNAME,PARAMETER) -> forward quser_data -m recorded_parameter: recorded_parameter(NICKNAME,PARAMETER)
-		//demo asserta(parameter(NICKNAME,PARAMETER))
-//		[!? parameter(NICKNAME,ACTORID,PARAMETER)] println(parametroDaSalvare(NICKNAME,ACTORID,PARAMETER))
 	] switchTo waitParametersToRecordOrClinicalHistoryRequest
 	
 	Plan handlePatientClinicalHistoryRequest [
@@ -486,7 +505,6 @@ QActor qdc_data_collector context ctx_data_centre {
 		removeRule check(_,_,_,_);
 		onMsg clinical_history_request_from_doctor : clinical_history_request_from_doctor(DOCTORNICKNAME,PATIENTNICKNAME,ACTORID) 
 					-> addRule check(DOCTORNICKNAME,PATIENTNICKNAME,'qdoctor_data_retriever',ACTORID);
-//		printCurrentMessage;
 		[!? check(DOCTORNICKNAME,PATIENTNICKNAME,_,_)] forward qassociation_manager -m check_association_for_data_request : check_association_for_data_request(DOCTORNICKNAME,PATIENTNICKNAME)
 //		[!? check(DOCTORNICKNAME,PATIENTNICKNAME,_,_)] println(nicknamePazienteACuiChiedoLaListaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(PATIENTNICKNAME,DOCTORNICKNAME))  
 	] switchTo waitCheckResult
@@ -502,7 +520,7 @@ QActor qdc_data_collector context ctx_data_centre {
 		removeRule check_result(RESULT);
 		onMsg check_patient_doctor_association_result: check_patient_doctor_association_result(RESULT) -> addRule check_result(RESULT);
 		[!? associated(PATIENTNICKNAME)] forward quser_data -m history_request : history_request(PATIENTNICKNAME);
-		[!? answer_and_actor_to_reply_to("You are not associated with this patient",ACTORNAME)] sendto ACTORNAME in ctx_doctor -m clinical_history_response : clinical_history_response(ANSWER);
+		[!? answer_and_actor_to_reply_to("You are not associated with this patient",ACTORNAME)] sendto ACTORNAME in ctx_doctor -m clinical_history_response : clinical_history_response("You are not associated with this patient");
 		[!? associated(PATIENTNICKNAME)] forward qdc_data_collector -m go_on : go_on else forward qdc_data_collector -m finish : finish
 	] transition stopAfter 86400000
 	  whenMsg go_on -> waitDoctorHistoryResponse,
@@ -611,7 +629,7 @@ QActor qdc_notification_manager context ctx_data_centre {
 	  
 	Plan findDoctorsID [
 		println(" --- [DCNM] finding ID of doctors' actors--- ");
-		printCurrentMessage;
+//		printCurrentMessage;
 //		[!? doctor(DOC)] println(dottoriRimastiInDCNotificationManager(DOC));
 //		removeRule doctor(_);
 		onMsg doctors_associate_with_patient_response : doctors_associate_with_patient_response(DOCTORS) -> actorOp getDoctors(DOCTORS)
@@ -948,8 +966,8 @@ QActor qpatient_gui_manager context ctx_patient_model {
 	  finally repeatPlan
 	  
 	Plan printMessage [
-		onMsg print_patient_gui : print_patient_gui(X) -> actorOp print(X);
-		printCurrentMessage
+		onMsg print_patient_gui : print_patient_gui(X) -> actorOp print(X)
+		//printCurrentMessage
 	] switchTo waitingPrint
 	
 }
@@ -1229,8 +1247,8 @@ QActor qdoctor_gui_manager context ctx_doctor_model {
 	  finally repeatPlan
 	  
 	Plan printMessage [
-		onMsg print_doctor_gui : print_doctor_gui(X) -> actorOp print(X);
-		printCurrentMessage
+		onMsg print_doctor_gui : print_doctor_gui(X) -> actorOp print(X)
+		//printCurrentMessage
 	] switchTo waitingPrint
 	
 }
