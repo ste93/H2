@@ -122,6 +122,8 @@ Dispatch check_association_for_advice: check_association_for_advice(DOCTORNICKNA
 Dispatch registration_request : registration_request(USERNICKNAME,ROLE)
 Dispatch registration_response : registration_response(RESPONSE)
 
+Dispatch history_request : history_request(PATIENTNICKNAME)
+
 /////////////// CONTEXTS /////////////////////////////////////////////////
 
 Context ctx_external_associationKb ip[host="localhost" port=8070]
@@ -272,6 +274,8 @@ QActor quser_data context ctx_user_data_KB {
 		registration_approved(NICKNAME,ROLE) :- registration, try_registration(NICKNAME,ROLE).
 		
 		can_login :- try_login(NICKNAME,ROLE), registered(NICKNAME,ROLE).
+		
+		get_history(HISTORY) :- patient(PATNICKNAME), findall(parameter(PARAMETER),parameter(PATNICKNAME,PARAMETER), HISTORY).	
 	}
 	
 	Plan init normal [
@@ -282,19 +286,16 @@ QActor quser_data context ctx_user_data_KB {
 		println(" --- [User Data KB] Waiting Request--- ")
 	] transition stopAfter 86400000
 	  whenMsg registration_request -> handleRequest, 
-	  whenMsg check_login -> checkLogin
+	  whenMsg check_login -> checkLogin,
+	  whenMsg recorded_parameter -> recordParameter,
+	  whenMsg history_request -> historyRequest
 	  finally repeatPlan
 	  
 	Plan handleRequest resumeLastPlan[
 	  	println(" --- [User Data KB] handling check Request--- ");
 	  	onMsg registration_request : registration_request(USERNICKNAME,ROLE) -> addRule try_registration(USERNICKNAME,ROLE);
-	  	printCurrentMessage;
-	  	[!? try_registration(USERNICKNAME,ROLE) ] println(attempt(USERNICKNAME,ROLE));
-	  	[!? already_registered] println("sono già registrato");
 		[!? already_registered] forward qdc_register -m registration_response : registration_response("This user name is already used. Choose another one!") else addRule registration;
-		[!? registration_approved(NICKNAME,ROLE)] println ("APPROVED");
 		[!? registration_approved(NICKNAME,ROLE)] demo asserta(registered(NICKNAME,ROLE));
-		[!? registered(NICKNAME,ROLE)] println(registered(NICKNAME,ROLE));
 		[?? registration] forward qdc_register -m registration_response : registration_response("Registration complete!");
 		removeRule try_registration(_,_)
 	] 
@@ -309,6 +310,17 @@ QActor quser_data context ctx_user_data_KB {
 		removeRule try_login(_,_)
 	]
 	
+	Plan recordParameter resumeLastPlan[
+		println(" --- [User Data KB] recording parameters --- ");
+		onMsg recorded_parameter: recorded_parameter(NICKNAME,PARAMETER) -> demo asserta(parameter(NICKNAME,PARAMETER))
+	]
+	
+	Plan historyRequest resumeLastPlan [
+		println(" --- [User Data KB] Handling history Request--- ");
+		onMsg history_request : history_request(PATNICKNAME) -> addRule patient(PATNICKNAME);
+		[!? get_history(HISTORY)] forward qdc_data_collector -m clinical_history_response : clinical_history_response(HISTORY);
+		removeRule patient(_)
+	]
 }
 
 QActor qdc_register context ctx_data_centre {
@@ -413,7 +425,7 @@ QActor qdc_data_collector context ctx_data_centre {
 	
 	Rules {
 		clinical_history_and_actor_to_reply_to(HISTORY,ACTORNAME) :- request_from(PATIENTNICKNAME,ACTOR,ACTORID),
-											   						 findall(parameter(PARAMETER), parameter(PATIENTNICKNAME,PARAMETER),HISTORY),
+																	 history(HISTORY),
 											   						 text_term(ID,ACTORID),
 									       	   						 text_concat(ACTOR,ID,ACTORNAME),!.
 									       	   						 
@@ -423,9 +435,11 @@ QActor qdc_data_collector context ctx_data_centre {
 									       	   			  									  text_concat(ACTOR,ID,ACTORNAME),!.
 		
 		answer_and_actor_to_reply_to(HISTORY,ACTORNAME) :- check(DOCTORNICKNAME,PATIENTNICKNAME,ACTOR,ACTORID),
-											   			   findall(parameter(PARAMETER), parameter(PATIENTNICKNAME,PARAMETER),HISTORY),
+											   			   history(HISTORY),
 											   			   text_term(ID,ACTORID),
 									       	   			   text_concat(ACTOR,ID,ACTORNAME),!.
+									       	   			   
+		associated(PATIENTNICKNAME) :- check_result("ok"), check(_,PATIENTNICKNAME,_,_).
 	}
 	
 	Plan init normal [
@@ -442,20 +456,34 @@ QActor qdc_data_collector context ctx_data_centre {
 	  
 	Plan recordParameter [
 		println(" --- [DCDC] recording parameters --- ");
-		onMsg recorded_parameter: recorded_parameter(NICKNAME,PARAMETER) -> demo asserta(parameter(NICKNAME,PARAMETER))
+		onMsg recorded_parameter: recorded_parameter(NICKNAME,PARAMETER) -> forward quser_data -m recorded_parameter: recorded_parameter(NICKNAME,PARAMETER)
+		//demo asserta(parameter(NICKNAME,PARAMETER))
 //		[!? parameter(NICKNAME,ACTORID,PARAMETER)] println(parametroDaSalvare(NICKNAME,ACTORID,PARAMETER))
 	] switchTo waitParametersToRecordOrClinicalHistoryRequest
 	
-	Plan handlePatientClinicalHistoryRequest resumeLastPlan [
-		println(" --- [DCDC] handling clinical history request --- ");
+	Plan handlePatientClinicalHistoryRequest [
+		println(" --- [DCDC] handling clinical history request for patient --- ");
 		onMsg clinical_history_request : clinical_history_request(PATIENTNICKNAME,ACTORID) ->  addRule request_from(PATIENTNICKNAME,'qpatient_data_retriever',ACTORID);
+		[!? request_from(PATIENTNICKNAME,_,_)] forward quser_data -m history_request : history_request(PATIENTNICKNAME)
+	] switchTo waitHistoryResponse
+	
+	Plan waitHistoryResponse [
+		println(" --- [DCDC] waiting response clinical history request for patient --- ")
+	] transition stopAfter 86400000
+	  whenMsg clinical_history_response -> handleHistoryResponse
+	  
+    Plan handleHistoryResponse [
+    	println(" --- [DCDC] handling response clinical history request for patient --- ");
+    	onMsg clinical_history_response : clinical_history_response(HISTORY) -> addRule history(HISTORY);	
 		[!? clinical_history_and_actor_to_reply_to(HISTORY,ACTORNAME)] 
 				sendto ACTORNAME in ctx_patient -m clinical_history_response : clinical_history_response(HISTORY);
+		removeRule history(_);
 		removeRule request_from(_,_,_)
-	]
+	] switchTo waitParametersToRecordOrClinicalHistoryRequest
 	
 	Plan handleDoctorClinicalHistoryRequest [
 		println(" --- [DCDC] handling clinical history request from doctor --- ");
+		removeRule check(_,_,_,_);
 		onMsg clinical_history_request_from_doctor : clinical_history_request_from_doctor(DOCTORNICKNAME,PATIENTNICKNAME,ACTORID) 
 					-> addRule check(DOCTORNICKNAME,PATIENTNICKNAME,'qdoctor_data_retriever',ACTORID);
 //		printCurrentMessage;
@@ -471,14 +499,30 @@ QActor qdc_data_collector context ctx_data_centre {
 	  
 	Plan handleCheckResult [
 		println(" --- [DCDC] handling the result of the association between that doctor and that patient --- ");
+		removeRule check_result(RESULT);
 		onMsg check_patient_doctor_association_result: check_patient_doctor_association_result(RESULT) -> addRule check_result(RESULT);
-//		[!? check_result(RESULT)] println(resuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuult(RESULT));
-		[!? answer_and_actor_to_reply_to(ANSWER,ACTORNAME)] sendto ACTORNAME in ctx_doctor -m clinical_history_response : clinical_history_response(ANSWER);
-//		[!? answer_and_actor_to_reply_to(ANSWER,ACTORNAME)] println(answeeeeeeeeeeeeeeeeeeeeeeeeeeeeerrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr(ANSWER,ACTORNAME));
-		removeRule check(_,_,_,_);
-		removeRule check_result(_)
+		[!? associated(PATIENTNICKNAME)] forward quser_data -m history_request : history_request(PATIENTNICKNAME);
+		[!? answer_and_actor_to_reply_to("You are not associated with this patient",ACTORNAME)] sendto ACTORNAME in ctx_doctor -m clinical_history_response : clinical_history_response(ANSWER);
+		[!? associated(PATIENTNICKNAME)] forward qdc_data_collector -m go_on : go_on else forward qdc_data_collector -m finish : finish
+	] transition stopAfter 86400000
+	  whenMsg go_on -> waitDoctorHistoryResponse,
+	  whenMsg finish -> waitParametersToRecordOrClinicalHistoryRequest
+	  
+	
+	Plan waitDoctorHistoryResponse [
+		println(" --- [DCDC] waiting response clinical history request for doctor --- ")
+	] transition stopAfter 86400000
+	  whenMsg clinical_history_response -> handleDoctorHistoryResponse
+	  
+    Plan handleDoctorHistoryResponse [
+    	println(" --- [DCDC] handling response clinical history request for doctor --- ");
+    	onMsg clinical_history_response : clinical_history_response(HISTORY) -> addRule history(HISTORY);	
+		[!? answer_and_actor_to_reply_to(HISTORY,ACTORNAME)] 
+				sendto ACTORNAME in ctx_doctor -m clinical_history_response : clinical_history_response(HISTORY);
+		removeRule history(_);
+		removeRule request_from(_,_,_)
 	] switchTo waitParametersToRecordOrClinicalHistoryRequest
-		
+
 }
 
 QActor qdc_data_analyser context ctx_data_centre {
