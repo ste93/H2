@@ -557,8 +557,11 @@ QActor qdc_data_collector context ctx_data_centre {
 QActor qdc_data_analyser context ctx_analyser {
 	
 	Rules {		
-		analysis(PATIENTNICKNAME,ACTORID,"febbre") :- patient_and_parameter(PATIENTNICKNAME,ACTORID,PARAMETER), eval(gt,PARAMETER,37),!.
-		analysis(PATIENTNICKNAME,ACTORID,"non febbre") :- patient_and_parameter(PATIENTNICKNAME,ACTORID,_),!.
+		analysis(PATIENTNICKNAME,ACTORID,"febbre") :- patient(PATIENTNICKNAME,ACTORID), parameter(temperatureC(T)), eval(gt,T,37),!.
+		analysis(PATIENTNICKNAME,ACTORID,"non febbre") :- patient(PATIENTNICKNAME,ACTORID), parameter(temperatureC(T)), !.
+	
+		analysis(PATIENTNICKNAME,ACTORID,"glicemia alta") :- patient(PATIENTNICKNAME,ACTORID), parameter(glycemiaMgDl(G)), eval(gt,G,120), !.
+		analysis(PATIENTNICKNAME,ACTORID,"glicemia normale") :- patient(PATIENTNICKNAME,ACTORID), parameter(glycemiaMgDl(G)), !.
 	}
 	
 	Plan init normal [
@@ -573,10 +576,13 @@ QActor qdc_data_analyser context ctx_analyser {
 	  
 	Plan analyseParameter resumeLastPlan [
 		println(" --- [DCDA] analysing parameters --- ");
-	  	onMsg analyse_parameter: analyse_parameter(PATIENTNICKNAME,ACTORID,PARAMETER) -> addRule patient_and_parameter(PATIENTNICKNAME,ACTORID,PARAMETER);
+//	  	onMsg analyse_parameter: analyse_parameter(PATIENTNICKNAME,ACTORID,PARAMETER) -> addRule patient_and_parameter(PATIENTNICKNAME,ACTORID,PARAMETER);
+		onMsg analyse_parameter: analyse_parameter(PATIENTNICKNAME,ACTORID,PARAMETER) -> addRule parameter(PARAMETER);
+		onMsg analyse_parameter: analyse_parameter(PATIENTNICKNAME,ACTORID,PARAMETER) -> addRule patient(PATIENTNICKNAME,ACTORID);
 	  	[!? analysis(PATIENTNICKNAME,ACTORID,RESULT)] forward qdc_notification_manager -m analysis_result : analysis_result(PATIENTNICKNAME,ACTORID,RESULT);
-//	  	[!? analysis(PATIENTNICKNAME,ACTORID,RESULT)] println(analyserrrrrrrrrrrrrrrr(PATIENTNICKNAME,ACTORID,RESULT));
-	  	removeRule patient_and_parameter(_,_,_)
+	  	[!? analysis(PATIENTNICKNAME,ACTORID,RESULT)] println(analyserrrrrrrrrrrrrrrr(PATIENTNICKNAME,ACTORID,RESULT));
+	  	removeRule patient(_,_);
+	  	removeRule parameter(_)
 	]
 
 }
@@ -589,6 +595,7 @@ QActor qdc_notification_manager context ctx_data_centre {
 									       	   				  text_concat(ACTOR,ID,ACTORNAME),!.
 									       	   				  
 		send_to_doctors(PATIENTNICKNAME,"ok") :- analysis_result(PATIENTNICKNAME,_,_,"febbre"), !.
+		send_to_doctors(PATIENTNICKNAME,"ok") :- analysis_result(PATIENTNICKNAME,_,_,"glicemia alta"), !.
 		send_to_doctors(_, "no") :- !.
 		
 		notification_to_doctor(ACTOR,ACTORNAME,RESULT,PATIENTNICKNAME) :- analysis_result(PATIENTNICKNAME,_,_,RESULT),
@@ -625,6 +632,7 @@ QActor qdc_notification_manager context ctx_data_centre {
 		println(" --- [DCNM] handling analysis --- ");
 		removeRule analysis_result(_,_,_,_);
 	  	onMsg analysis_result : analysis_result(PATIENTNICKNAME,ACTORID,RESULT) -> addRule analysis_result(PATIENTNICKNAME,'qpatient_notification_receiver',ACTORID,RESULT);
+	  	printCurrentMessage;
 	  	[!? analysis_and_actor_to_reply_to(ANALYSIS,ACTORNAME)] sendto ACTORNAME in ctx_patient -m analysis_notification : analysis_notification(ANALYSIS);
 	  	[!? send_to_doctors(PATIENTNICKNAME,"ok")] forward qassociation_manager -m doctors_associate_with_patient : doctors_associate_with_patient(PATIENTNICKNAME);
 	  	[!? send_to_doctors(PATIENTNICKNAME,"ok")] forward qdc_notification_manager -m go_on : go_on else forward qdc_notification_manager -m restart : restart
