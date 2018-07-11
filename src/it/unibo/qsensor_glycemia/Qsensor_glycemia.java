@@ -18,4 +18,11 @@ public class Qsensor_glycemia extends AbstractQsensor_glycemia {
 		String ID = newID.replaceAll("\\D+", "");
 		return ID;
 	}
+	
+	public String getName(final String oldID) {
+		System.out.println("[OLDID] " + oldID);
+		String name = oldID.substring(4, oldID.length()-5);
+		System.out.println("[NAME] " + name);
+		return name;
+	}
 }

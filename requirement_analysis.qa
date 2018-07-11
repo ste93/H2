@@ -565,7 +565,7 @@ QActor qdc_data_analyser context ctx_analyser {
 		analysis(PATIENTNICKNAME,ACTORID,"febbre") :- patient(PATIENTNICKNAME,ACTORID), parameter(temperatureC(T)), eval(gt,T,37),!.
 		analysis(PATIENTNICKNAME,ACTORID,"non febbre") :- patient(PATIENTNICKNAME,ACTORID), parameter(temperatureC(T)), !.
 	
-		analysis(PATIENTNICKNAME,ACTORID,"emergency") :- patient(PATIENTNICKNAME,ACTORID), parameter(glycemiaMgDl(G)), eval(gt,T,300),!.
+		analysis(PATIENTNICKNAME,ACTORID,"emergency") :- patient(PATIENTNICKNAME,ACTORID), parameter(glycemiaMgDl(G)), eval(gt,G,300),!.
 		analysis(PATIENTNICKNAME,ACTORID,"glicemia alta") :- patient(PATIENTNICKNAME,ACTORID), parameter(glycemiaMgDl(G)), eval(gt,G,120), !.
 		analysis(PATIENTNICKNAME,ACTORID,"glicemia normale") :- patient(PATIENTNICKNAME,ACTORID), parameter(glycemiaMgDl(G)), !.
 	}
@@ -922,13 +922,14 @@ QActor qpatient_sensor_manager context ctx_patient_model {
 	
 	Plan removeTempSensor resumeLastPlan [
 		println(" --- [PSM] removing the temperature sensor --- ");
-		[!? temperature_sensor(SENSORNAME)] println(remove_sendingto(SENSORNAME));//[!? get_names_temp(SENSORNAME,_, _)] println(remove_sendingto(SENSORNAME));
-		[?? temperature_sensor(SENSORNAME)] sendto SENSORNAME in ctx_patient -m finish : finish
+		//[!? temperature_sensor(SENSORNAME)] println(remove_sendingto(SENSORNAME));//[!? get_names_temp(SENSORNAME,_, _)] println(remove_sendingto(SENSORNAME));
+		[?? temperature_sensor(SENSORNAME)] forward  SENSORNAME -m finish : finish
+		//[?? temperature_sensor(SENSORNAME)] sendto SENSORNAME in ctx_patient -m finish : finish
 	]  switchTo waitInput
 	
 	Plan removeGlycemiaSensor resumeLastPlan [
 		println(" --- [PSM] removing the glycemia sensor --- ");
-		[?? get_names_glycemia(SENSORNAME, _, _)] sendto SENSORNAME in ctx_patient -m finish : finish
+		[?? glycemia_sensor(SENSORNAME)] forward SENSORNAME -m finish : finish
 	]  switchTo waitInput
 	
 	
@@ -992,7 +993,10 @@ QActor qsensor_glycemia context ctx_sensor{
 	Plan init normal [
 		println(" --- [Sensor(glycemia)] initializing --- ");
 		[!? actorobj(ID)] actorOp getId(ID);
-		[?? actorOpDone(OP,R)] addRule my_patient_id(R)
+		[?? actorOpDone(OP,R)] addRule my_patient_id(R);
+		[!? actorobj(ID)] actorOp getName(ID);
+		[?? actorOpDone(OP,R)] addRule my_name(R);
+		[!? my_name(R)] println(my_name(R))
 	] switchTo sendData
 	
 	Plan sendData [
@@ -1006,9 +1010,11 @@ QActor qsensor_glycemia context ctx_sensor{
 	//	delay 2000;
 		[!? p(TYPE, PATIENTNAME)] forward PATIENTNAME -m sensor_data: sensor_data(TYPE,250);
 		delay 2000;
-		[!? p(TYPE, PATIENTNAME)] forward PATIENTNAME -m sensor_data: sensor_data(TYPE,400)
+		[!? p(TYPE, PATIENTNAME)] forward PATIENTNAME -m sensor_data: sensor_data(TYPE,400);
+	    [!? my_name(NAME)] forward NAME -m go_on : go_on
 	] transition stopAfter 86400000
-	whenMsg finish -> end
+	whenMsg finish -> end,
+	whenMsg go_on -> sendData
 	finally repeatPlan
 	
 	Plan end [

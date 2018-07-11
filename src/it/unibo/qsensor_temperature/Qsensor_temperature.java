@@ -26,4 +26,5 @@ public class Qsensor_temperature extends AbstractQsensor_temperature {
 		System.out.println("[NAME] " + name);
 		return name;
 	}
+	
 }
