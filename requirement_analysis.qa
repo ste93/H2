@@ -85,7 +85,29 @@ Dispatch advice_to_send_result : advice_to_send_result(RESULT)
 //doctor_advice(advice, doctor nickname)
 Dispatch doctor_advice : doctor_advice(ADVICE,DOCTORNICKNAME)
 
-///// Utility Message ///// 	????????????????????????????????????????????????????????????????????????????????
+Dispatch association_request : association_request(DOCTORNICKNAME,PATIENTNICKNAME)
+Dispatch association_doctors : association_doctors(PATIENTNICKNAME)
+Dispatch association_response : association_response(RESPONSE)
+
+
+Dispatch check_association_for_data_request: check_association_for_data_request(DOCTORNICKNAME,PATIENTNICKNAME)
+Dispatch check_association_for_advice: check_association_for_advice(DOCTORNICKNAME,PATIENTNICKNAME)
+
+Dispatch registration_request : registration_request(USERNICKNAME,ROLE)
+Dispatch registration_response : registration_response(RESPONSE)
+
+Dispatch history_request : history_request(PATIENTNICKNAME)
+
+Dispatch add_temperature_gui : add_temperature_gui
+Dispatch add_glycemia_gui : add_glycemia_gui
+Dispatch remove_temperature_gui : remove_temperature_gui
+Dispatch remove_glycemia_gui : remove_glycemia_gui
+
+Dispatch sensor_data : sensor_data(SENSORTYPE,PARAMETER)
+
+Dispatch emergency_alert : emergency_alert(PATIENTID)
+
+///// Utility Message /////
 
 //repeat 
 Dispatch repeat: repeat
@@ -108,27 +130,6 @@ Dispatch print_doctor_gui : print_doctor_gui(X)
 //print_patient_gui
 Dispatch print_patient_gui : print_patient_gui(X)
 
-Dispatch association_request : association_request(DOCTORNICKNAME,PATIENTNICKNAME)
-Dispatch association_doctors : association_doctors(PATIENTNICKNAME)
-Dispatch association_response : association_response(RESPONSE)
-
-
-Dispatch check_association_for_data_request: check_association_for_data_request(DOCTORNICKNAME,PATIENTNICKNAME)
-Dispatch check_association_for_advice: check_association_for_advice(DOCTORNICKNAME,PATIENTNICKNAME)
-
-Dispatch registration_request : registration_request(USERNICKNAME,ROLE)
-Dispatch registration_response : registration_response(RESPONSE)
-
-Dispatch history_request : history_request(PATIENTNICKNAME)
-
-Dispatch add_temperature_gui : add_temperature_gui
-Dispatch add_glycemia_gui : add_glycemia_gui
-Dispatch remove_temperature_gui : remove_temperature_gui
-Dispatch remove_glycemia_gui : remove_glycemia_gui
-
-Dispatch sensor_data : sensor_data(SENSORTYPE,PARAMETER)
-
-Dispatch emergency_alert : emergency_alert(PATIENTID)
 
 
 /////////////// CONTEXTS /////////////////////////////////////////////////
@@ -263,7 +264,7 @@ QActor qassociation_manager context ctx_data_centre {
 QActor quser_data context ctx_user_data_KB {
 	
 	Rules {
-		//TODO
+		
 		//registered("a","p").
 		//registered("b","p").
 		//registered("c","d").
@@ -348,7 +349,7 @@ QActor qdc_register context ctx_data_centre {
 	Plan waitRegistrationOrChecks [
 		println(" --- [DCR] waiting registration --- ")
 	] transition stopAfter 86400000
-	  whenMsg registration_gui -> checkAndRegister, // da chi viene chiamata? dalla GUI ???????????????????????????????????????????????????????????????????????????????????????????
+	  whenMsg registration_gui -> checkAndRegister, 
 	  whenMsg check_patient_login -> checkLoginPatient, 
 	  whenMsg check_doctor_login -> checkLoginDoctor
 	  finally repeatPlan
@@ -545,8 +546,8 @@ QActor qdc_data_analyser context ctx_analyser {
 		analysis(PATIENTNICKNAME,ACTORID,"alert", "fever") :- patient(PATIENTNICKNAME,ACTORID), parameter(temperatureC(T)), eval(gt,T,37),!.
 		analysis(PATIENTNICKNAME,ACTORID,"normal", "normal temperature") :- patient(PATIENTNICKNAME,ACTORID), parameter(temperatureC(T)), !.
 	
-		analysis(PATIENTNICKNAME,ACTORID,"emergency : critical glycemia") :- patient(PATIENTNICKNAME,ACTORID), parameter(glycemiaMgDl(G)), eval(gt,G,300),!.
-		analysis(PATIENTNICKNAME,ACTORID,"alert" "high but not critical glycemia") :- patient(PATIENTNICKNAME,ACTORID), parameter(glycemiaMgDl(G)), eval(gt,G,120), !.
+		analysis(PATIENTNICKNAME,ACTORID,"emergency"," critical glycemia") :- patient(PATIENTNICKNAME,ACTORID), parameter(glycemiaMgDl(G)), eval(gt,G,300),!.
+		analysis(PATIENTNICKNAME,ACTORID,"alert", "high but not critical glycemia") :- patient(PATIENTNICKNAME,ACTORID), parameter(glycemiaMgDl(G)), eval(gt,G,120), !.
 		analysis(PATIENTNICKNAME,ACTORID,"normal","normal glycemia") :- patient(PATIENTNICKNAME,ACTORID), parameter(glycemiaMgDl(G)), !.
 	}
 	
@@ -862,7 +863,7 @@ QActor qpatient_sensor_manager context ctx_patient_model {
 	  Plan addTempSensor [
 	  	println(" --- [PSM] adding a new temperature sensor --- ");
 		[!? my_new_name('qsensor_temperature', SENSORNAME)] addRule temperature_sensor(SENSORNAME);
-		[!? temperature_sensor(SENSORNAME)] println(new_temp_sensor(SENSORNAME));// print corretta???????????????????????????????????????????????????????????????????????????????????
+		[!? temperature_sensor(SENSORNAME)] println(new_temp_sensor(SENSORNAME));
 		[!? temperature_sensor(SENSORNAME)] demo createActor(SENSORNAME, 'it.unibo.qsensor_temperature.Qsensor_temperature')
 	] switchTo waitInput
 	
@@ -1079,9 +1080,6 @@ QActor qpatient_notification_receiver context ctx_patient_model {
 	Plan handleNotification resumeLastPlan [
 		println(" --- [PNR] handling notification --- ");
 		onMsg analysis_notification : analysis_notification(LEVEL,RESULT) -> actorOp print(analysis(LEVEL,RESULT))
-		//onMsg analysis_notification : analysis_notification(LEVEL,RESULT) -> addRule result(LEVEL,RESULT)
-		//[!? result("emergency",RESULT)] actorOp print(emergency(RESULT))
-		//[!? result("alert",RESULT)] actorOp print(alert(RESULT))
 	]
 	
 	Plan handleAdvice resumeLastPlan [
