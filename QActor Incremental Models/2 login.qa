@@ -1,0 +1,123 @@
+System login
+
+//registration(user nickname,user role - doctor or patient)
+Dispatch registration_gui : registration_gui(NICKNAME,ROLE)
+
+//login_patient_gui(patient nickname)
+Dispatch login_patient_gui : login_patient_gui(NICKNAME)
+
+//login_doctor_gui(doctor nickname)
+Dispatch login_doctor_gui : login_doctor_gui(NICKNAME)
+
+//check_login(user nickname,user role - doctor or patient)
+Dispatch check_login : check_login(NICKNAME,ROLE)
+
+//login_result(the result of the login request)
+Dispatch login_result : login_result(RESULT)
+
+Context ctx_data_centre ip[host="localhost" port=8070]
+Context ctx_patient 	ip[host="localhost" port=8050]
+Context ctx_doctor 		ip[host="localhost" port=8060]
+
+QActor qdc_register context ctx_data_centre {
+	
+	Rules {
+		already_registered :- try_registration(NICKNAME,ROLE), registered(NICKNAME,_).
+		
+		registration_approved(NICKNAME,ROLE) :- registration, try_registration(NICKNAME,ROLE).
+		
+		can_login :- try_login(NICKNAME,ROLE), registered(NICKNAME,ROLE).
+	}
+	
+	Plan init normal [
+		println(" --- [DCR] initializing --- ");
+		actorOp createGUI
+	] switchTo waitRegistrationOrChecks
+	
+	Plan waitRegistrationOrChecks [
+		println(" --- [DCR] waiting registration --- ")
+	] transition stopAfter 86400000
+	  whenMsg registration_gui -> checkAndRegister,
+	  whenMsg check_login -> checkLogin
+	  finally repeatPlan
+	  
+	Plan checkAndRegister resumeLastPlan [
+		println(" --- [DCR] checking registration and register --- ");
+		onMsg registration_gui : registration_gui(NICKNAME,ROLE) -> addRule try_registration(NICKNAME,ROLE);
+		[!? already_registered] actorOp print("This user name is already used. Choose another one!") else addRule registration;
+		[!? registration_approved(NICKNAME,ROLE)] actorOp asserta(registered(NICKNAME,ROLE)); 
+		[?? registration] actorOp print("Registration complete!");
+		removeRule try_registration(_,_)
+	]
+	
+	Plan checkLogin resumeLastPlan [
+		println(" --- [DCR] checking login --- ");
+		onMsg check_login : check_login(NICKNAME,ROLE) -> addRule try_login(NICKNAME,ROLE);
+		[!? can_login] forward qpatient_login -m login_result : login_result("Login ok") 
+				  else forward qpatient_login -m login_result : login_result("Can not login. You are not register");
+		removeRule try_login(_)
+	]
+	
+}
+
+QActor qpatient_login context ctx_patient {
+	
+	Plan init normal [
+		println(" --- [PL] initializing --- ");
+		actorOp createGUI
+	] switchTo waitLogin
+	
+	Plan waitLogin [
+		println(" --- [PL] waiting login --- ")
+	] transition stopAfter 86400000
+	  whenMsg login_patient_gui -> chekLogin
+	  finally repeatPlan
+	  
+	Plan chekLogin [
+		println(" --- [PL] waiting login --- ");
+		onMsg login_patient_gui : login_patient_gui(NICKNAME) -> forward qdc_register -m check_login : check_login(NICKNAME,"p")
+	] switchTo waitLoginResult
+	
+	Plan waitLoginResult [
+		println(" --- [PL] waiting login result --- ")
+	] transition stopAfter 86400000
+	  whenMsg login_result -> handleLoginResult
+	  finally repeatPlan
+	  
+	Plan handleLoginResult [
+		println(" --- [PL] handling login result--- ");
+		onMsg login_result : login_result(RESULT) -> actorOp print(RESULT)
+	] switchTo waitLogin
+	
+}
+
+QActor qdoctor_login context ctx_doctor {
+	
+	Plan init normal [
+		println(" --- [DL] initializing --- ");
+		actorOp createGUI
+	] switchTo waitLogin
+	
+	Plan waitLogin [
+		println(" --- [DL] waiting login --- ")
+	] transition stopAfter 86400000
+	  whenMsg login_doctor_gui -> chekLogin
+	  finally repeatPlan
+	  
+	Plan chekLogin [
+		println(" --- [DL] waiting login --- ");
+		onMsg login_doctor_gui : login_doctor_gui(NICKNAME) -> forward qdc_register -m check_login : check_login(NICKNAME,"d")
+	] switchTo waitLoginResult
+	
+	Plan waitLoginResult [
+		println(" --- [DL] waiting login result --- ")
+	] transition stopAfter 86400000
+	  whenMsg login_result -> handleLoginResult
+	  finally repeatPlan
+	  
+	Plan handleLoginResult [
+		println(" --- [DL] handling login result--- ");
+		onMsg login_result : login_result(RESULT) -> actorOp print(RESULT)
+	] switchTo waitLogin
+	
+}

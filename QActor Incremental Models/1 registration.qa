@@ -1,0 +1,36 @@
+System registration
+
+//registration(user nickname,user role - doctor or patient)
+Dispatch registration_gui : registration_gui(NICKNAME,ROLE)
+
+Context ctx_data_centre ip[host="localhost" port=8070]
+
+QActor qdc_register context ctx_data_centre {
+	
+	Rules {
+		already_registered :- try_registration(NICKNAME,ROLE), registered(NICKNAME,_).
+		
+		registration_approved(NICKNAME,ROLE) :- registration, try_registration(NICKNAME,ROLE).
+	}
+	
+	Plan init normal [
+		println(" --- [DCR] initializing --- ");
+		actorOp createGUI
+	] switchTo waitRegistration
+	
+	Plan waitRegistration [
+		println(" --- [DCR] waiting registration --- ")
+	] transition stopAfter 86400000
+	  whenMsg registration_gui -> checkRegistration
+	  finally repeatPlan
+	  
+	Plan checkRegistration resumeLastPlan [
+		println(" --- [DCR] checking registration --- ");
+		onMsg registration_gui : registration_gui(NICKNAME,ROLE) -> addRule try_registration(NICKNAME,ROLE);
+		[!? already_registered] actorOp print("This user name is already used. Choose another one!") else addRule registration;
+		[!? registration_approved(NICKNAME,ROLE)] actorOp asserta(registered(NICKNAME,ROLE)); 
+		[?? registration] actorOp print("Registration complete!");
+		removeRule try_registration(NICKNAME,ROLE)
+	]
+	
+}

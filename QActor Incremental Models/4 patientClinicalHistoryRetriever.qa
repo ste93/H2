@@ -1,0 +1,248 @@
+System patientClinicalHistoryRetriever
+
+//registration(user nickname,user role - doctor or patient)
+Dispatch registration_gui : registration_gui(NICKNAME,ROLE)
+
+//login_patient_gui(patient nickname)
+Dispatch login_patient_gui : login_patient_gui(NICKNAME)
+
+//login_doctor_gui(doctor nickname)
+Dispatch login_doctor_gui : login_doctor_gui(NICKNAME)
+
+//check_login(user nickname,user role - doctor or patient)
+Dispatch check_login : check_login(NICKNAME,ROLE)
+
+//login_result(the result of the login request)
+Dispatch login_result : login_result(RESULT)
+
+//my_nickname(user nickname)
+Dispatch my_nickname : my_nickname(NICKNAME)
+
+//recorded_parameter(nickname of the patient to whom parameter belong,recorded parameter to send to the data collector)
+Dispatch recorded_parameter: recorded_parameter(NICKNAME,PARAMETER)
+
+//user_data_request_gui
+Dispatch user_data_request_gui : user_data_request_gui
+
+//clinical_history_request(nickname of the patient that made the request, id of the actor to reply to)
+Dispatch clinical_history_request : clinical_history_request(PATIENTNICKNAME,ACTORID)
+
+//clinical_history_response(patient clinical history)
+Dispatch clinical_history_response : clinical_history_response(HISTORY)
+
+Context ctx_data_centre 	ip[host="localhost" port=8070]
+Context ctx_patient 		ip[host="localhost" port=8050]
+Context ctx_patient_model 	ip[host="localhost" port=1234]
+
+QActor qdc_register context ctx_data_centre {
+	
+	Rules {
+		already_registered :- try_registration(NICKNAME,ROLE), registered(NICKNAME,_).
+		
+		registration_approved(NICKNAME,ROLE) :- registration, try_registration(NICKNAME,ROLE).
+		
+		can_login :- try_login(NICKNAME,ROLE), registered(NICKNAME,ROLE).
+	}
+	
+	Plan init normal [
+		println(" --- [DCR] initializing --- ");
+		actorOp createGUI
+	] switchTo waitRegistrationOrChecks
+	
+	Plan waitRegistrationOrChecks [
+		println(" --- [DCR] waiting registration --- ")
+	] transition stopAfter 86400000
+	  whenMsg registration_gui -> checkAndRegister,
+	  whenMsg check_login -> checkLogin
+	  finally repeatPlan
+	  
+	Plan checkAndRegister resumeLastPlan [
+		println(" --- [DCR] checking registration and register --- ");
+		onMsg registration_gui : registration_gui(NICKNAME,ROLE) -> addRule try_registration(NICKNAME,ROLE);
+		[!? already_registered] actorOp print("This user name is already used. Choose another one!") else addRule registration;
+		[!? registration_approved(NICKNAME,ROLE)] actorOp asserta(registered(NICKNAME,ROLE)); 
+		[?? registration] actorOp print("Registration complete!");
+		removeRule try_registration(_,_)
+	]
+	
+	Plan checkLogin resumeLastPlan [
+		println(" --- [DCR] checking login --- ");
+		onMsg check_login : check_login(NICKNAME,ROLE) -> addRule try_login(NICKNAME,ROLE);
+		[!? can_login] forward qpatient_login -m login_result : login_result("Login ok") 
+				  else forward qpatient_login -m login_result : login_result("Can not login. You are not register");
+		removeRule try_login(_,_)
+	]
+	
+}
+
+QActor qdc_data_collector context ctx_data_centre {
+	
+	Rules {
+		clinical_history_and_actor_to_reply_to(HISTORY,ACTORNAME) :- request_from(PATIENTNICKNAME,ACTOR,ACTORID),
+											   						 findall(parameter(PARAMETER),parameter(PATIENTNICKNAME,PARAMETER),HISTORY),
+											   						 text_term(ID,ACTORID),
+									       	   						 text_concat(ACTOR,ID,ACTORNAME),!.
+	}
+	
+	Plan init normal [
+		println(" --- [DCDC] initializing --- ")
+	] switchTo waitParametersToRecordOrClinicalHistoryRequest
+	
+	Plan waitParametersToRecordOrClinicalHistoryRequest [
+		println(" --- [DCDC] waiting parameters to record or clinical history request --- ")
+	] transition stopAfter 86400000
+	  whenMsg recorded_parameter -> recordParameter,
+	  whenMsg clinical_history_request -> handleClinicalHistoryRequest 
+	  finally repeatPlan
+	  
+	Plan recordParameter resumeLastPlan [
+		println(" --- [DCDC] recording parameters --- ");
+		onMsg recorded_parameter: recorded_parameter(NICKNAME,PARAMETER) -> actorOp asserta(parameter(NICKNAME,PARAMETER))
+	]
+	
+	Plan handleClinicalHistoryRequest resumeLastPlan [
+		println(" --- [DCDC] handling clinical history request --- ");
+		onMsg clinical_history_request : clinical_history_request(PATIENTNICKNAME,ACTORID) ->  addRule request_from(PATIENTNICKNAME,'qpatient_data_retriever',ACTORID);
+		[!? clinical_history_and_actor_to_reply_to(HISTORY,ACTORNAME)] sendto ACTORNAME in ctx_patient -m clinical_history_response : clinical_history_response(HISTORY);
+		removeRule request_from(_,_,_)
+	]
+		
+}
+
+QActor qpatient_login context ctx_patient {
+	
+	Rules {
+		myNewName(Prot,Name,N1) :-
+			value(nameCounter,N1),
+			text_term(N1S,N1), 
+			text_term(ProtS,Prot),
+ 			text_concat(ProtS,N1S,Name),
+			replaceRule(instance(_,_,_),
+			instance(Prot,N1,Name)).
+	}
+	
+	Plan init normal [
+		println(" --- [PL] initializing --- ");
+		actorOp createGUI
+	] switchTo waitLogin
+	
+	Plan waitLogin [
+		println(" --- [PL] waiting login --- ")
+	] transition stopAfter 86400000
+	  whenMsg login_patient_gui -> chekLogin
+	  finally repeatPlan
+	  
+	Plan chekLogin [
+		println(" --- [PL] waiting login --- ");
+		onMsg login_patient_gui : login_patient_gui(NICKNAME) -> actorOp asserta(patient_nickname(NICKNAME)); 
+		[!? patient_nickname(NICKNAME)] forward qdc_register -m check_login : check_login(NICKNAME,"p")
+	] switchTo waitLoginResult
+	
+	Plan waitLoginResult [
+		println(" --- [PL] waiting login result --- ")
+	] transition stopAfter 86400000
+	  whenMsg login_result -> handleLoginResult
+	  finally repeatPlan
+	  
+	Plan handleLoginResult [
+		println(" --- [PL] handling login result--- ");
+		onMsg login_result : login_result(RESULT) -> addRule login_result(RESULT);  
+		[!? login_result(RESULT)] actorOp print(RESULT);
+		[!? login_result("Can not login. You are not register")] removeRule patient_nickname(_);
+		[!? login_result("Login ok")] switchTo createActors;
+		removeRule login_result(_)
+
+	] switchTo waitLogin
+	
+	Plan createActors [
+		println(" --- [PL] creating actors --- ");
+		[!? newName(qpatient_data_sender, Name, N)] demo createActor(Name, 'it.unibo.qpatient_data_sender.Qpatient_data_sender');
+		[!? myNewName(qpatient_data_retriever, Name, N)] demo createActor(Name, 'it.unibo.qpatient_data_retriever.Qpatient_data_retriever')
+	] switchTo sendNickname
+	
+	Plan sendNickname [
+		println(" --- [PL] sending nickname to my actors --- ");
+		[!? patient_nickname(NICKNAME)] sendto qpatient_data_sender in ctx_patient -m my_nickname : my_nickname(NICKNAME);
+		[?? patient_nickname(NICKNAME)] sendto qpatient_data_retriever in ctx_patient -m my_nickname : my_nickname(NICKNAME)
+	] switchTo waitLogin
+	
+}
+
+QActor qpatient_data_sender context ctx_patient_model {
+	
+	Plan init normal [
+		println(" --- [PDS] initializing --- ")
+	] switchTo waitMyNickname
+	
+	Plan waitMyNickname [
+		println(" --- [PDS] waiting my nickname --- ")
+	] transition stopAfter 120000
+	  whenMsg my_nickname -> registerMyNickname
+	  finally repeatPlan
+	
+	Plan registerMyNickname [
+		onMsg my_nickname : my_nickname(NICKNAME) -> addRule my_nickname(NICKNAME)
+	] switchTo sendData
+	
+	Plan sendData [
+		println(" --- [PDS] sending parameters --- ");
+		[!? my_nickname(NICKNAME)] forward qdc_data_collector -m recorded_parameter: recorded_parameter(NICKNAME,36);
+		delay 60000;
+		[!? my_nickname(NICKNAME)] forward qdc_data_collector -m recorded_parameter: recorded_parameter(NICKNAME,37);
+		delay 60000;
+		[!? my_nickname(NICKNAME)] forward qdc_data_collector -m recorded_parameter: recorded_parameter(NICKNAME,38);
+		delay 60000;
+		[!? my_nickname(NICKNAME)] forward qdc_data_collector -m recorded_parameter: recorded_parameter(NICKNAME,39);
+		delay 60000
+	] finally repeatPlan
+	
+}
+
+QActor qpatient_data_retriever context ctx_patient_model {
+	
+	Rules {
+		my_id_and_nickname(PATIENTNICKNAME,ACTORID) :- my_nickname(PATIENTNICKNAME), my_actor_id(ACTORID). 
+	}
+	
+	Plan init normal [
+		println(" --- [PDR] initializing --- ");
+		actorOp createGUI;
+		[!? actorobj(ID)] actorOp getId(ID);
+		[?? actorOpDone(OP,R)] addRule my_actor_id(R)
+	] switchTo waitMyNickname
+	
+	Plan waitMyNickname [
+		println(" --- [PDR] waiting my nickname --- ")
+	] transition stopAfter 120000
+	  whenMsg my_nickname -> registerMyNickname
+	  finally repeatPlan
+	
+	Plan registerMyNickname [
+		onMsg my_nickname : my_nickname(NICKNAME) -> addRule my_nickname(NICKNAME)
+	] switchTo waitUserDataRequest
+	
+	Plan waitUserDataRequest [
+		println(" --- [PDR] waiting patient data request --- ")
+	] transition stopAfter 120000
+	  whenMsg user_data_request_gui -> handleDataRequest
+	  finally repeatPlan
+	  
+	Plan handleDataRequest [
+		println(" --- [PDR] handling patient data request --- ");
+		[!? my_id_and_nickname(PATIENTNICKNAME,ACTORID)] onMsg user_data_request_gui : user_data_request_gui -> 
+				forward qdc_data_collector -m clinical_history_request : clinical_history_request(PATIENTNICKNAME,ACTORID)
+	] switchTo waitClinicalHistory
+	
+	Plan waitClinicalHistory [
+		println(" --- [PDR] waiting patient clinical history --- ")
+	] transition stopAfter 120000
+	  whenMsg clinical_history_response -> handleClinicalHistoryResponse
+	  finally repeatPlan
+	  
+	Plan handleClinicalHistoryResponse [
+		println(" --- [PDR] handling patient data request --- ");
+		onMsg clinical_history_response : clinical_history_response(HISTORY) -> actorOp print(HISTORY)
+	] switchTo waitUserDataRequest
+	
+}
+
