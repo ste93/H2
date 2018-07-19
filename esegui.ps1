@@ -1,0 +1,1 @@
+Start-Process powershell.exe -ArgumentList ".\script.ps1"
